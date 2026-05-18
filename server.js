@@ -100,9 +100,9 @@ app.get("/auth/check", (req, res) => res.json({ authed: isAuthed(req) }));
 function git(cmd) {
   return execSync(cmd, { cwd: REPO_DIR, encoding: "utf-8", env: {
     ...process.env,
-    GIT_AUTHOR_NAME: "TravelID Editor",
+    GIT_AUTHOR_NAME: "CX Dashboard",
     GIT_AUTHOR_EMAIL: "editor@crimtan.com",
-    GIT_COMMITTER_NAME: "TravelID Editor",
+    GIT_COMMITTER_NAME: "CX Dashboard",
     GIT_COMMITTER_EMAIL: "editor@crimtan.com",
   }}).trim();
 }
@@ -125,9 +125,9 @@ async function ensureRepo() {
         encoding: "utf-8",
         env: {
           ...process.env,
-          GIT_AUTHOR_NAME: "TravelID Editor",
+          GIT_AUTHOR_NAME: "CX Dashboard",
           GIT_AUTHOR_EMAIL: "editor@crimtan.com",
-          GIT_COMMITTER_NAME: "TravelID Editor",
+          GIT_COMMITTER_NAME: "CX Dashboard",
           GIT_COMMITTER_EMAIL: "editor@crimtan.com",
         }
       });
@@ -205,7 +205,7 @@ app.post("/prototype/edit", requireAuth, async (req, res) => {
   undoStack.push(html); if (undoStack.length > 20) undoStack.shift();
   html = html.split(find).join(replace);
   fs.writeFileSync(PROTO_PATH, html, "utf-8");
-  commitAndPush(message || "Content update via TravelID Editor").catch(console.error);
+  commitAndPush(message || "Content update via CX Dashboard").catch(console.error);
   res.json({ ok: true });
 });
 
@@ -341,8 +341,8 @@ app.get("*", (_req, res) => res.sendFile(path.join(__dirname, "public", "index.h
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 ensureRepo().then(() => {
-  app.listen(PORT, () => console.log(`TravelID Editor on :${PORT}`));
+  app.listen(PORT, () => console.log(`CX Dashboard on :${PORT}`));
 }).catch(err => {
   console.error("Boot error:", err);
-  app.listen(PORT, () => console.log(`TravelID Editor on :${PORT} (repo not ready)`));
+  app.listen(PORT, () => console.log(`CX Dashboard on :${PORT} (repo not ready)`));
 });
