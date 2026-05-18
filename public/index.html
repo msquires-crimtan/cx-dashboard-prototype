@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TravelID Japan — Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.x/tabler-icons.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --t50:#E1F5EE;--t100:#9FE1CB;--t200:#5DCAA5;--t600:#0F6E56;--t800:#085041;
+    --g50:#F8F7F4;--g100:#EFEFEB;--g200:#DDDDD8;--g400:#AEADA6;--g600:#6B6A65;--g900:#1C1C1A;
+    --r50:#FCEBEB;--r100:#F7C1C1;--r600:#A32D2D;
+    --a50:#FAEEDA;--a100:#FAC775;--a600:#854F0B;
+    --b50:#E6F1FB;--b100:#B5D4F4;--b600:#185FA5;
+    --sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+    --rad:10px;--rad-sm:6px;--pill:999px;
+  }
+  html,body{height:100%;font-family:var(--sans);background:var(--g50);color:var(--g900);-webkit-font-smoothing:antialiased;overflow:hidden;}
+
+  /* Gate */
+  #gate{
+    position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    z-index:100;padding:24px;
+    background: radial-gradient(ellipse at 70% 50%, #FF5A1A 0%, #C8001E 45%, #7A0020 100%);
+  }
+  #gate::before{
+    content:'';position:absolute;inset:0;
+    background: radial-gradient(ellipse at 15% 40%, rgba(120,0,30,0.7) 0%, transparent 60%);
+    pointer-events:none;
+  }
+  .gate-logo{display:flex;align-items:center;justify-content:center;margin-bottom:28px;position:relative;z-index:1;}
+  .gate-logo img{height:28px;width:auto;filter:brightness(0) invert(1);}
+  .gate-card{
+    width:100%;max-width:400px;position:relative;z-index:1;
+    background:rgba(60,5,25,0.75);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border:0.5px solid rgba(255,255,255,0.12);border-radius:16px;
+    padding:32px 28px;display:flex;flex-direction:column;gap:18px;
+  }
+  .gate-card h1{font-size:18px;font-weight:600;color:#fff;text-align:center;}
+  .gate-card .gate-sub{font-size:13px;color:rgba(255,255,255,0.55);text-align:center;margin-top:-8px;}
+  label{display:block;font-size:11.5px;font-weight:500;color:rgba(255,255,255,0.5);letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px;}
+  input[type="password"]{
+    width:100%;padding:10px 13px;
+    border:0.5px solid rgba(255,255,255,0.15);border-radius:8px;
+    background:rgba(255,255,255,0.08);color:#fff;
+    font-family:var(--sans);font-size:14px;outline:none;
+    transition:border-color .15s,background .15s;
+  }
+  input[type="password"]:focus{border-color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.12);}
+  input[type="password"]::placeholder{color:rgba(255,255,255,0.3);}
+  .err{font-size:12.5px;color:#FF8A8A;display:none;margin-top:-8px;}
+  .btn-primary{
+    width:100%;padding:11px;
+    background:rgba(255,255,255,0.15);color:#fff;
+    font-family:var(--sans);font-size:14px;font-weight:500;
+    border:0.5px solid rgba(255,255,255,0.25);border-radius:8px;
+    cursor:pointer;transition:background .15s,opacity .15s;
+  }
+  .btn-primary:hover{background:rgba(255,255,255,0.22);}
+  .btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+  .notice{font-size:12px;color:rgba(255,255,255,0.3);line-height:1.55;padding-top:4px;border-top:0.5px solid rgba(255,255,255,0.08);text-align:center;}
+  .compass-pill{display:inline-flex;align-items:center;gap:6px;margin-top:4px;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);font-size:11.5px;color:rgba(255,255,255,0.6);}
+
+  /* App */
+  #app{display:none;height:100vh;flex-direction:column;}
+  #app.on{display:flex;}
+
+  /* Topbar */
+  #topbar{height:46px;flex-shrink:0;background:var(--g50);border-bottom:0.5px solid var(--g200);display:flex;align-items:center;gap:10px;padding:0 16px;}
+  .tb-icon{width:26px;height:26px;border-radius:var(--rad-sm);background:var(--t50);display:flex;align-items:center;justify-content:center;color:var(--t600);font-size:13px;flex-shrink:0;}
+  .tb-name{font-size:13px;font-weight:500;flex:1;}
+  .badge{display:flex;align-items:center;gap:5px;font-size:11px;padding:3px 8px;border-radius:var(--pill);background:var(--t50);color:var(--t600);border:0.5px solid var(--t100);}
+  .badge::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--t200);}
+  .icon-btn{width:28px;height:28px;border-radius:var(--rad-sm);border:none;background:none;color:var(--g400);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:color .15s,background .15s;}
+  .icon-btn:hover{color:var(--g900);background:var(--g100);}
+  .icon-btn:disabled{opacity:.35;cursor:not-allowed;}
+
+  /* Split */
+  #split{flex:1;display:flex;min-height:0;}
+
+  /* Chat panel */
+  #chat-panel{width:380px;flex-shrink:0;display:flex;flex-direction:column;border-right:0.5px solid var(--g200);background:#fff;}
+
+  /* Tab bar */
+  #tabs{display:flex;border-bottom:0.5px solid var(--g100);flex-shrink:0;}
+  .tab{flex:1;padding:8px;font-size:11.5px;font-weight:500;text-align:center;color:var(--g400);cursor:pointer;border:none;background:none;font-family:var(--sans);border-bottom:2px solid transparent;transition:color .15s,border-color .15s;}
+  .tab.active{color:var(--t600);border-bottom-color:var(--t600);}
+
+  /* Chat view */
+  #chat-view{flex:1;display:flex;flex-direction:column;min-height:0;}
+  #msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;}
+  #msgs::-webkit-scrollbar{width:4px;}
+  #msgs::-webkit-scrollbar-thumb{background:var(--g200);border-radius:4px;}
+  .msg{display:flex;gap:8px;align-items:flex-start;}
+  .msg.user{flex-direction:row-reverse;}
+  .av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;margin-top:2px;}
+  .av.ai{background:var(--t50);color:var(--t600);border:0.5px solid var(--t100);}
+  .av.user{background:var(--t600);color:var(--t50);}
+  .mi{display:flex;flex-direction:column;max-width:86%;}
+  .bub{padding:8px 11px;font-size:13px;line-height:1.6;border-radius:11px;}
+  .msg.assistant .bub{background:var(--g50);color:var(--g900);border:0.5px solid var(--g100);border-top-left-radius:3px;}
+  .msg.user .bub{background:var(--t600);color:var(--t50);border-top-right-radius:3px;}
+  .bub code{font-family:var(--mono);font-size:11px;background:rgba(0,0,0,0.07);padding:1px 4px;border-radius:3px;}
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 8px;border-radius:var(--pill);margin-top:4px;align-self:flex-start;}
+  .chip.working{background:var(--a50);color:var(--a600);border:0.5px solid var(--a100);}
+  .chip.done{background:var(--t50);color:var(--t600);border:0.5px solid var(--t100);}
+  .chip.error{background:var(--r50);color:var(--r600);border:0.5px solid var(--r100);}
+  .chip.info{background:var(--b50);color:var(--b600);border:0.5px solid var(--b100);}
+  .think{display:flex;gap:4px;align-items:center;padding:9px 11px;}
+  .dot{width:5px;height:5px;border-radius:50%;background:var(--g400);animation:pulse 1.2s infinite;}
+  .dot:nth-child(2){animation-delay:.2s;}
+  .dot:nth-child(3){animation-delay:.4s;}
+  @keyframes pulse{0%,80%,100%{opacity:.2;transform:scale(.8);}40%{opacity:1;transform:scale(1);}}
+  #inp{padding:10px 11px;border-top:0.5px solid var(--g100);display:flex;gap:7px;align-items:flex-end;flex-shrink:0;}
+  #txt{flex:1;resize:none;border:0.5px solid var(--g200);border-radius:var(--rad-sm);padding:8px 10px;font-size:13px;font-family:var(--sans);color:var(--g900);background:var(--g50);min-height:34px;max-height:120px;line-height:1.5;outline:none;transition:border-color .15s,background .15s;}
+  #txt:focus{border-color:var(--t200);background:#fff;}
+  #txt::placeholder{color:var(--g400);}
+  #snd{width:34px;height:34px;border-radius:var(--rad-sm);border:0.5px solid var(--g200);background:#fff;color:var(--g900);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;transition:background .15s,border-color .15s,color .15s;}
+  #snd:hover{background:var(--t600);border-color:var(--t600);color:#fff;}
+  #snd:disabled{opacity:.35;cursor:not-allowed;}
+  #snd:disabled:hover{background:#fff;border-color:var(--g200);color:var(--g900);}
+
+  /* History view */
+  #history-view{display:none;flex:1;overflow-y:auto;padding:12px;}
+  #history-view.active{display:block;}
+  .h-empty{padding:24px;text-align:center;font-size:13px;color:var(--g400);}
+  .h-item{padding:10px 12px;border:0.5px solid var(--g200);border-radius:var(--rad-sm);margin-bottom:8px;background:#fff;}
+  .h-item-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+  .h-item-time{font-size:11px;color:var(--g400);font-family:var(--mono);}
+  .h-item-desc{font-size:12.5px;color:var(--g900);line-height:1.4;}
+  .h-undo-btn{font-size:11px;color:var(--r600);background:none;border:0.5px solid var(--r100);border-radius:var(--rad-sm);padding:2px 7px;cursor:pointer;font-family:var(--sans);}
+  .h-undo-btn:hover{background:var(--r50);}
+
+  /* Preview panel */
+  #preview-panel{flex:1;display:flex;flex-direction:column;background:var(--g100);min-width:0;}
+  #preview-bar{height:36px;flex-shrink:0;background:var(--g50);border-bottom:0.5px solid var(--g200);display:flex;align-items:center;gap:10px;padding:0 14px;}
+  .plbl{font-size:11px;font-weight:500;color:var(--g400);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;}
+  .purl{font-size:11px;color:var(--g600);flex:1;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #refresh-btn{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--g400);background:none;border:none;cursor:pointer;font-family:var(--sans);padding:3px 7px;border-radius:var(--rad-sm);transition:color .15s,background .15s;white-space:nowrap;}
+  #refresh-btn:hover{color:var(--t600);background:var(--t50);}
+  .spinning i{animation:spin .7s linear infinite;display:inline-block;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #preview-wrap{flex:1;position:relative;}
+  #preview-status{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;color:var(--g400);text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;}
+  #preview-iframe{width:100%;height:100%;border:none;display:block;opacity:0;transition:opacity .3s;}
+  #preview-iframe.loaded{opacity:1;}
+  #preview-wrap.flash::after{content:'';position:absolute;inset:0;background:var(--t200);opacity:0;animation:flashIn .4s ease forwards;pointer-events:none;}
+  @keyframes flashIn{0%{opacity:.25;}100%{opacity:0;}}
+  @keyframes fi{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
+  .fi{animation:fi .2s ease forwards;}
+</style>
+</head>
+<body>
+
+<!-- Gate -->
+<div id="gate">
+  <div class="gate-logo">
+    <img src="/crimtan-logo-white.png" alt="Crimtan" style="height:32px;width:auto;">
+  </div>
+  <div class="gate-card">
+    <h1>TravelID Japan</h1>
+    <p class="gate-sub">AI content editor — authorised access only</p>
+    <div>
+      <label for="pw">Password</label>
+      <input type="password" id="pw" placeholder="••••••••" autocomplete="current-password">
+      <p class="err" id="pw-err">Incorrect password — please try again.</p>
+    </div>
+    <button class="btn-primary" id="login-btn">Sign in</button>
+    <p class="notice">
+      <span class="compass-pill">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/><circle cx="12" cy="12" r="3" fill="rgba(255,255,255,0.6)"/><line x1="12" y1="2" x2="12" y2="6" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="18" x2="12" y2="22" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="12" x2="6" y2="12" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/><line x1="18" y1="12" x2="22" y2="12" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Powered by Compass AI
+      </span>
+    </p>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+  <div id="topbar">
+    <img src="/crimtan-logo-black.png" alt="Crimtan" style="height:26px;width:auto;object-fit:contain;flex-shrink:0;">
+    <div style="width:0.5px;height:20px;background:var(--g200);flex-shrink:0;"></div>
+    <div class="tb-icon"><i class="ti ti-plane-tilt"></i></div>
+    <div class="tb-name">TravelID Japan — AI editor</div>
+    <div class="badge">Connected</div>
+    <button class="icon-btn" id="undo-btn" title="Undo last change" disabled style="display:none"><i class="ti ti-arrow-back-up"></i></button>
+    <button class="icon-btn" id="reset-btn" title="Reset to published version"><i class="ti ti-refresh"></i></button>
+    <button class="icon-btn" id="logout-btn" title="Sign out"><i class="ti ti-logout"></i></button>
+  </div>
+  <div id="split">
+
+    <!-- Chat panel -->
+    <div id="chat-panel">
+      <div id="tabs">
+        <button class="tab active" data-tab="chat"><i class="ti ti-message-2" style="font-size:12px;margin-right:4px"></i>Chat</button>
+        <button class="tab" data-tab="history"><i class="ti ti-history" style="font-size:12px;margin-right:4px"></i>History</button>
+      </div>
+
+      <div id="chat-view">
+        <div id="msgs">
+          <div class="msg assistant fi">
+            <div class="av ai"><i class="ti ti-plane-tilt"></i></div>
+            <div class="mi">
+              <div class="bub">Hi! I'm your AI editor for <strong>TravelID Japan</strong>. I can make any change you describe — text, data, new sections, API connections, styling. Just tell me what you want and I'll apply it instantly to the preview.</div>
+            </div>
+          </div>
+          <div class="msg assistant fi">
+            <div class="av ai"><i class="ti ti-bulb"></i></div>
+            <div class="mi">
+              <div class="bub" style="background:var(--b50);border-color:var(--b100);color:var(--b600);">
+                <strong>Try asking:</strong><br>
+                · "Change the hero headline to…"<br>
+                · "Add a new data source showing UK arrivals"<br>
+                · "Connect the trends chart to live Google Trends data"<br>
+                · "Update the stats: 36.9M arrivals to 38.2M"
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="padding:7px 12px 0;display:flex;align-items:center;justify-content:center;">
+          <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(180,30,40,0.07);border:0.5px solid rgba(180,30,40,0.15);border-radius:999px;padding:5px 13px 5px 9px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><circle cx="12" cy="12" r="10" stroke="#B41E28" stroke-width="1.5"/><circle cx="12" cy="12" r="3" fill="#B41E28"/><line x1="12" y1="2" x2="12" y2="6" stroke="#B41E28" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="18" x2="12" y2="22" stroke="#B41E28" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="12" x2="6" y2="12" stroke="#B41E28" stroke-width="1.5" stroke-linecap="round"/><line x1="18" y1="12" x2="22" y2="12" stroke="#B41E28" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span style="font-size:11.5px;font-weight:500;color:#B41E28;">Powered by Compass AI</span>
+            <span style="font-size:11px;color:rgba(180,30,40,0.4)">→</span>
+          </div>
+        </div>
+        <div id="inp">
+          <textarea id="txt" placeholder="Describe any change to TravelID Japan…" rows="1"></textarea>
+          <button id="snd" aria-label="Send"><i class="ti ti-send-2"></i></button>
+        </div>
+      </div>
+
+      <div id="history-view">
+        <div class="h-empty" id="h-empty">No changes yet.</div>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div id="preview-panel">
+      <div id="preview-bar">
+        <span class="plbl">Live preview</span>
+        <span class="purl">TravelID Japan · v30 · local</span>
+        <button id="refresh-btn"><i class="ti ti-refresh" style="font-size:12px"></i> Refresh</button>
+      </div>
+      <div id="preview-wrap">
+        <div id="preview-status">
+          <i class="ti ti-loader" style="font-size:22px;color:var(--g200);animation:spin .7s linear infinite;display:inline-block;"></i>
+          <span>Loading preview…</span>
+        </div>
+        <iframe id="preview-iframe" src="" title="TravelID Japan"></iframe>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Constants ─────────────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `You are an expert web developer and AI agent editing a single-page HTML prototype: TravelID Japan (v30).
+
+IMPORTANT — This prototype uses INLINE STYLES everywhere, not CSS classes.
+
+KNOWN HTML STRUCTURES (use these exact strings in find):
+
+Hero stats section (line ~417):
+<div style="display:flex;gap:28px;margin-bottom:40px">
+          <div>
+            <div style="font-size:30px;font-weight:800;color:#FABA8F;font-variant-numeric:tabular-nums">36.9M</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-top:3px">Arrivals 2024</div>
+          </div>
+          <div style="width:1px;background:rgba(255,255,255,0.12)"></div>
+          <div>
+            <div style="font-size:30px;font-weight:800;color:#FABA8F;font-variant-numeric:tabular-nums">¥8.14T</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-top:3px">Tourist Spend</div>
+          </div>
+
+Hero heading (line ~405):
+<h1 style="font-size:60px;font-weight:700;line-height:1.0;margin:0 0 10px;color:#ffffff;text-shadow:0 2px 20px rgba(0,0,0,0.3);font-family:'Unbounded',sans-serif;letter-spacing:-1.5px">
+          Japan<br>
+          <span style="color:#FABA8F">Inbound</span><br>
+          Tourism
+        </h1>
+
+Hero subtitle (line ~410):
+<div style="font-size:21px;font-weight:300;color:rgba(255,255,255,0.55);margin-bottom:30px;letter-spacing:0.5px">Intelligence Dashboard</div>
+
+Always copy find strings EXACTLY character-for-character from the known structures above or from source context provided.
+
+You have full access to read and modify this prototype. You can make ANY change the user requests:
+- Text, copy, headlines, labels, numbers, statistics
+- New data sections or charts
+- API integrations (fetch calls, data sources)
+- Styling changes (colours, fonts, layout)
+- New features or interactive elements
+- Structural HTML changes
+
+WORKFLOW — for every user request:
+1. Think about what needs to change in the HTML
+2. Produce ONE OR MORE edits using this EXACT format on separate lines:
+
+[EDIT]: find:"EXACT_TEXT_TO_FIND" replace:"REPLACEMENT_TEXT"
+
+Rules for [EDIT] lines:
+- find must be an exact verbatim substring of the HTML (it will be used for string matching)
+- For small text changes: find the specific text, replace with new text
+- For larger changes (new sections, new scripts): find a unique anchor point (e.g. a closing tag), replace it with the anchor + new code
+- Use \\" to escape quotes inside find/replace strings if needed
+- Multiple [EDIT] lines are applied in order
+- After the [EDIT] lines, give a brief plain-English summary of what was changed
+
+When a <prototype_source_context> block is provided, you MUST use the exact text from it for your [EDIT] find strings — never guess or reconstruct HTML structure. Copy the find string verbatim from the source context.
+
+Source context is automatically provided. Always use it for exact find strings. Never say "let me check the source" — just make the edit.
+Be confident, technical, and concise. Never refuse a request — attempt every change.`;
+
+let changeHistory = [];
+let undoCount = 0;
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+const gateEl    = document.getElementById("gate");
+const appEl     = document.getElementById("app");
+const pwEl      = document.getElementById("pw");
+const loginBtn  = document.getElementById("login-btn");
+const pwErr     = document.getElementById("pw-err");
+const logoutBtn = document.getElementById("logout-btn");
+const undoBtn   = document.getElementById("undo-btn");
+const resetBtn  = document.getElementById("reset-btn");
+
+function showApp() {
+  gateEl.style.display = "none";
+  appEl.classList.add("on");
+  txtEl.focus();
+  statusEl.querySelector("span").textContent = "Setting up prototype…";
+  waitForPrototype().then(ready => {
+    if (ready) loadPreview();
+    else statusEl.querySelector("span").textContent = "Prototype unavailable — try refreshing.";
+  });
+}
+
+fetch("/auth/check", { credentials: "same-origin" })
+  .then(r => r.json()).then(d => { if (d.authed) showApp(); }).catch(() => {});
+
+pwEl.addEventListener("keydown", e => { if (e.key === "Enter") loginBtn.click(); });
+loginBtn.addEventListener("click", async () => {
+  const pw = pwEl.value; if (!pw) return;
+  loginBtn.disabled = true; loginBtn.textContent = "Checking…"; pwErr.style.display = "none";
+  try {
+    const res = await fetch("/auth/login", { method: "POST", headers: {"Content-Type":"application/json"}, credentials: "same-origin", body: JSON.stringify({ password: pw }) });
+    if (!res.ok) throw new Error();
+    showApp();
+  } catch { pwErr.style.display = "block"; loginBtn.disabled = false; loginBtn.textContent = "Sign in"; }
+});
+
+logoutBtn.addEventListener("click", async () => {
+  await fetch("/auth/logout", { method: "POST", credentials: "same-origin" });
+  location.reload();
+});
+
+// Undo (topbar button = undo latest)
+undoBtn.addEventListener("click", () => rollbackTo(changeHistory.length - 2));
+
+// Reset to published version
+resetBtn.addEventListener("click", async () => {
+  if (!confirm("Reset the preview to the published version? This will undo all local changes.")) return;
+  resetBtn.classList.add("spinning");
+  try {
+    await fetch("/prototype/refresh", { method: "POST", credentials: "same-origin" });
+    changeHistory = []; undoBtn.disabled = true;
+    renderHistory();
+    loadPreview(true);
+    addMsg("assistant", "✓ Preview reset to the published version.", null, true);
+  } catch { addMsg("assistant", "Reset failed — try again.", null, true); }
+  resetBtn.classList.remove("spinning");
+});
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+const chatView    = document.getElementById("chat-view");
+const historyView = document.getElementById("history-view");
+
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    if (tab.dataset.tab === "chat") {
+      chatView.style.display = "flex";
+      historyView.classList.remove("active");
+    } else {
+      chatView.style.display = "none";
+      historyView.classList.add("active");
+    }
+  });
+});
+
+function renderHistory() {
+  const empty = document.getElementById("h-empty");
+  const existing = historyView.querySelectorAll(".h-item");
+  existing.forEach(e => e.remove());
+  if (changeHistory.length === 0) { empty.style.display = "block"; return; }
+  empty.style.display = "none";
+  [...changeHistory].reverse().forEach((item, i) => {
+    const el = document.createElement("div");
+    el.className = "h-item";
+    // i=0 is most recent; only most recent can be undone via server undo
+    const isLatest = i === 0;
+    el.innerHTML = `
+      <div class="h-item-meta">
+        <span class="h-item-time">${item.time}</span>
+        <button class="h-undo-btn" onclick="rollbackTo(${changeHistory.length - 1 - i})" title="${isLatest ? 'Undo this change' : 'Roll back to this point'}">
+          <i class="ti ti-arrow-back-up" style="font-size:10px"></i> ${isLatest ? 'Undo' : 'Roll back here'}
+        </button>
+      </div>
+      <div class="h-item-desc">${item.desc}</div>`;
+    historyView.appendChild(el);
+  });
+}
+
+async function rollbackTo(targetIdx) {
+  // targetIdx is the index in changeHistory we want to roll back to
+  // We need to undo (changeHistory.length - 1 - targetIdx) times
+  const stepsToUndo = changeHistory.length - 1 - targetIdx;
+  if (stepsToUndo <= 0) return;
+  if (!confirm("Roll back " + stepsToUndo + " change" + (stepsToUndo > 1 ? "s" : "") + "? This cannot be re-done.")) return;
+  for (let i = 0; i < stepsToUndo; i++) {
+    const res = await fetch("/prototype/undo", { method: "POST", credentials: "same-origin" });
+    const data = await res.json();
+    if (!data.ok) break;
+    changeHistory.pop();
+  }
+  undoBtn.disabled = changeHistory.length === 0;
+  renderHistory();
+  loadPreview(true);
+  addMsg("assistant", "↩ Rolled back " + stepsToUndo + " change" + (stepsToUndo > 1 ? "s" : "") + ".", null, true);
+}
+
+// ── Preview ───────────────────────────────────────────────────────────────────
+const iframeEl    = document.getElementById("preview-iframe");
+const statusEl    = document.getElementById("preview-status");
+const previewWrap = document.getElementById("preview-wrap");
+const refreshBtn  = document.getElementById("refresh-btn");
+
+function loadPreview(force = false) {
+  iframeEl.classList.remove("loaded");
+  statusEl.style.display = "flex";
+  iframeEl.src = "/prototype?t=" + Date.now() + (force ? "&force=1" : "");
+}
+
+// Poll until prototype is ready, then load
+async function waitForPrototype() {
+  for (let i = 0; i < 20; i++) {
+    try {
+      const r = await fetch("/prototype/ready", { credentials: "same-origin" });
+      const d = await r.json();
+      if (d.ready) return true;
+    } catch {}
+    await new Promise(res => setTimeout(res, 2000));
+  }
+  return false;
+}
+
+iframeEl.addEventListener("load", () => {
+  iframeEl.classList.add("loaded");
+  statusEl.style.display = "none";
+});
+
+function flashPreview() {
+  previewWrap.classList.remove("flash");
+  void previewWrap.offsetWidth;
+  previewWrap.classList.add("flash");
+}
+
+refreshBtn.addEventListener("click", async () => {
+  refreshBtn.classList.add("spinning");
+  await fetch("/prototype/refresh", { method: "POST", credentials: "same-origin" }).catch(() => {});
+  loadPreview(true);
+  setTimeout(() => refreshBtn.classList.remove("spinning"), 1500);
+});
+
+// ── Chat ──────────────────────────────────────────────────────────────────────
+const msgsEl = document.getElementById("msgs");
+const txtEl  = document.getElementById("txt");
+const sndEl  = document.getElementById("snd");
+let busy = false, history = [];
+
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const scroll = () => msgsEl.scrollTop = msgsEl.scrollHeight;
+const now = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+function addMsg(role, html, chips, system = false) {
+  const wrap = document.createElement("div");
+  wrap.className = `msg ${system ? "assistant" : role} fi`;
+  const av = document.createElement("div");
+  av.className = `av ${role === "user" ? "user" : "ai"}`;
+  av.innerHTML = system ? '<i class="ti ti-info-circle"></i>' : (role === "user" ? '<i class="ti ti-user"></i>' : '<i class="ti ti-plane-tilt"></i>');
+  const mi = document.createElement("div"); mi.className = "mi";
+  const bub = document.createElement("div"); bub.className = "bub";
+  if (system) { bub.style.background = "var(--b50)"; bub.style.borderColor = "var(--b100)"; bub.style.color = "var(--b600)"; }
+  bub.innerHTML = html;
+  mi.appendChild(bub);
+  (chips || []).forEach(c => {
+    const el = document.createElement("div");
+    el.className = `chip ${c.type}`; if (c.id) el.id = c.id;
+    el.innerHTML = `<i class="ti ti-${c.icon}" style="font-size:11px"></i>${c.label}`;
+    mi.appendChild(el);
+  });
+  wrap.appendChild(av); wrap.appendChild(mi);
+  msgsEl.appendChild(wrap); scroll(); return mi;
+}
+
+function addThinking(label) {
+  const wrap = document.createElement("div"); wrap.id = "thinking"; wrap.className = "msg assistant fi";
+  const av = document.createElement("div"); av.className = "av ai"; av.innerHTML = '<i class="ti ti-plane-tilt"></i>';
+  const bub = document.createElement("div"); bub.className = "bub";
+  bub.style.background = "var(--g50)"; bub.style.border = "0.5px solid var(--g100)";
+  bub.innerHTML = `<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--g600)">
+    <i class="ti ti-loader" style="animation:spin .7s linear infinite;display:inline-block;font-size:14px;color:var(--t600)"></i>
+    <span id="thinking-label">${label || "Reading prototype & thinking…"}</span>
+  </div>`;
+  wrap.appendChild(av); wrap.appendChild(bub); msgsEl.appendChild(wrap); scroll();
+}
+function updateThinking(label) {
+  const el = document.getElementById("thinking-label");
+  if (el) el.textContent = label;
+}
+function removeThinking() { document.getElementById("thinking")?.remove(); }
+
+async function proxyPost(ep, body) {
+  const res = await fetch(ep, { method: "POST", headers: {"Content-Type":"application/json"}, credentials: "same-origin", body: JSON.stringify(body) });
+  if (res.status === 401) { location.reload(); throw new Error("session_expired"); }
+  return res.json();
+}
+
+// Fetch targeted excerpts from the prototype around a keyword
+async function fetchSourceContext(keyword) {
+  if (!keyword) return null;
+  try {
+    const res = await fetch("/prototype/search?q=" + encodeURIComponent(keyword), { credentials: "same-origin" });
+    const data = await res.json();
+    if (!data.found) return null;
+    return data.contexts.map(function(c, i) { return "--- Context " + (i+1) + " (line " + c.line + ") ---\n" + c.context; }).join("\n\n");
+  } catch(e) { return null; }
+}
+
+async function callClaude(userMsg) {
+  // Before sending to Claude, fetch relevant source context so edits are precise
+  const context = await fetchSourceContext(extractKeyword(userMsg));
+  
+  const enrichedMsg = context
+    ? `${userMsg}\n\n<prototype_source_context>\n${context}\n</prototype_source_context>\n\nUse the exact text from the source context above when constructing your [EDIT] find strings.`
+    : userMsg;
+
+  history.push({ role: "user", content: enrichedMsg });
+  const data = await proxyPost("/proxy/anthropic", {
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 4000,
+    system: SYSTEM_PROMPT,
+    messages: history
+  });
+  const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+  // Store clean version in history (without the source context)
+  history.push({ role: "assistant", content: text });
+  return text;
+}
+
+// Extract a likely keyword from the user's message to find relevant source context
+function extractKeyword(msg) {
+  // Pull quoted strings first
+  const quoted = msg.match(/"([^"]+)"/);
+  if (quoted) return quoted[1];
+  // Otherwise use longest word that's likely a content term
+  const words = msg.split(/\s+/).filter(w => w.length > 4 && !/^(change|update|add|make|the|this|that|with|from|into|show|find|replace)/i.test(w));
+  return words[0] || msg.split(" ").slice(0, 3).join(" ");
+}
+
+// Parse all [EDIT] blocks from Claude's response
+function parseEdits(reply) {
+  const edits = [];
+  // Match [EDIT]: find:"..." replace:"..."
+  const re = /\[EDIT\]:\s*find:"((?:[^"\\]|\\.)*)"\s+replace:"((?:[^"\\]|\\.)*)"/gs;
+  let m;
+  while ((m = re.exec(reply)) !== null) {
+    edits.push({
+      find: m[1].replace(/\\"/g, '"').replace(/\\n/g, '\n'),
+      replace: m[2].replace(/\\"/g, '"').replace(/\\n/g, '\n')
+    });
+  }
+  return edits;
+}
+
+// Apply edits to the local prototype file
+async function applyEdits(edits, commitMsg) {
+  const results = [];
+  for (let i = 0; i < edits.length; i++) {
+    const edit = edits[i];
+    const res = await fetch("/prototype/edit", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      credentials: "same-origin",
+      body: JSON.stringify({ find: edit.find, replace: edit.replace, message: commitMsg || "Update via TravelID Editor" })
+    });
+    const data = await res.json();
+    results.push({ ok: res.ok, error: data.error, find: edit.find });
+  }
+  return results;
+}
+
+async function handleSend() {
+  const text = txtEl.value.trim(); if (!text || busy) return;
+  busy = true; sndEl.disabled = true; txtEl.value = ""; txtEl.style.height = "auto";
+  addMsg("user", esc(text));
+  addThinking("Reading prototype source…");
+
+  try {
+    updateThinking("Thinking about your change…");
+    const reply = await callClaude(text);
+    removeThinking();
+
+    const edits = parseEdits(reply);
+    // Summary = reply without [EDIT] lines
+    const summary = reply.replace(/\[EDIT\]:.*$/gm, "").trim();
+
+    if (edits.length > 0) {
+      const chipId = "chip-" + Date.now();
+      addMsg("assistant", esc(summary) || "Applying changes…", [
+        { type: "working", icon: "loader", label: `Applying ${edits.length} edit${edits.length > 1 ? "s" : ""}…`, id: chipId }
+      ]);
+
+      const results = await applyEdits(edits, (summary || text).substring(0, 100));
+      const failed = results.filter(r => !r.ok);
+      const succeeded = results.filter(r => r.ok);
+
+      const chip = document.getElementById(chipId);
+      if (failed.length === 0) {
+        if (chip) { chip.className = "chip done"; chip.innerHTML = '<i class="ti ti-circle-check" style="font-size:11px"></i>Applied — updating preview…'; }
+        loadPreview(true);
+        setTimeout(() => {
+          flashPreview();
+          if (chip) { chip.className = "chip done"; chip.innerHTML = `<i class="ti ti-circle-check" style="font-size:11px"></i>${edits.length} change${edits.length > 1 ? "s" : ""} applied`; }
+        }, 600);
+
+        // Update undo button + history
+        undoBtn.disabled = false;
+        undoCount++;
+        changeHistory.push({ time: now(), desc: summary || text });
+        renderHistory();
+      } else {
+        const msg = failed.map(f => `Could not find: <code>${esc(f.find.substring(0, 60))}…</code>`).join("<br>");
+        if (chip) { chip.className = "chip error"; chip.innerHTML = `<i class="ti ti-alert-circle" style="font-size:11px"></i>${failed.length} edit${failed.length > 1 ? "s" : ""} failed`; }
+        addMsg("assistant", `Some edits couldn't be applied — the text wasn't found in the prototype:<br>${msg}<br><br>Try rephrasing or being more specific about what to change.`, null, true);
+        if (succeeded.length > 0) { loadPreview(true); setTimeout(flashPreview, 600); }
+      }
+    } else {
+      // No edits — just a conversational response
+      addMsg("assistant", esc(summary || reply));
+    }
+  } catch (err) {
+    if (err.message !== "session_expired") {
+      removeThinking();
+      addMsg("assistant", "Something went wrong — please try again.", [{ type: "error", icon: "alert-circle", label: "Error" }]);
+    }
+  }
+
+  busy = false; sndEl.disabled = false; txtEl.focus();
+}
+
+sndEl.addEventListener("click", handleSend);
+txtEl.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } });
+txtEl.addEventListener("input", () => { txtEl.style.height = "auto"; txtEl.style.height = Math.min(txtEl.scrollHeight, 120) + "px"; });
+</script>
+</body>
+</html>
