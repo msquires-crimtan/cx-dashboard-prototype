@@ -7,13 +7,160 @@
 <link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{--dp:#2E0029;--tp:#5C0049;--rose:#FF006E;--blue:#161689;--teal:#00B5B8;--sun:#FFD166;--bg:#1a0018;--bg2:#240020;--bg3:#2e002a;--border:#4a0042;--border2:#660058;--text:#f5e6f2;--text2:#c9a8c4;--text3:#8a5a84;--r:4px;--rl:8px}
+
+/* ── LIGHT THEME (Crimtan.com palette) ── */
+html.light{
+  --dp:#ffffff;--tp:#f5f5f5;--rose:#FF006E;--blue:#2d2d8e;--teal:#00B5B8;--sun:#FF8C00;
+  --bg:#f8f8f8;--bg2:#ffffff;--bg3:#f0f0f0;
+  --border:#e0e0e0;--border2:#cccccc;
+  --text:#1a1a1a;--text2:#444444;--text3:#888888;
+}
+html.light body{background:#f8f8f8}
+html.light body::before{background-image:radial-gradient(circle,#e0e0e0 1px,transparent 1px)}
+html.light .hdr{background:#ffffff;border-bottom:2px solid var(--rose)}
+
+html.light .logo-client{color:#1a1a1a !important}
+html.light .logo-sub{color:#888 !important}
+
+html.light .tag-teal{background:#e8f9f9;color:#007a7c;border-color:#b0e8e8}
+html.light .tag-sun{background:#fff3e0;color:#c46000;border-color:#ffd599}
+html.light .srch input{background:#f5f5f5;border-color:#ddd;color:#1a1a1a}
+html.light .srch input::placeholder{color:#aaa}
+html.light .srch input:focus{border-color:var(--rose)}
+html.light .btn-history{background:#f5f5f5;border-color:#ddd;color:#444}
+html.light .btn-history:hover{background:#fff0f5;border-color:var(--rose);color:var(--rose)}
+html.light .hero{background:linear-gradient(135deg,#fff0f7 0%,#f0f0ff 60%,#e8f0ff 100%);border-bottom:1px solid #e8e8e8}
+html.light .hero-title{color:#1a1a1a}
+html.light .hero-title em{color:#007a7c}
+html.light .hero-title span{color:var(--rose)}
+html.light .hero-desc{color:#666}
+html.light .hstat-v{color:#1a1a1a}
+html.light .hstat-l{color:#888}
+html.light .sb{background:#ffffff;border-right:1px solid #e8e8e8}
+html.light .sb-lbl{color:#aaa}
+html.light .tab-row{color:#888}
+html.light .tab-row:hover{background:#fff0f5;color:#333}
+html.light .tab-row.active{background:linear-gradient(90deg,#ff006e12,transparent);color:#1a1a1a;border-left-color:var(--rose)}
+html.light .tab-cnt{background:#f0f0f0;color:#888}
+html.light .tab-row.active .tab-cnt{background:var(--rose);color:#fff}
+html.light .content{background:#f8f8f8}
+html.light .ct-title{color:#1a1a1a}
+html.light .ct-sub,.html.light .sort-hint{color:#888}
+html.light .filters-bar select{background:#fff;border-color:#ddd;color:#333}
+html.light .filters-bar select option{background:#fff;color:#1a1a1a}
+html.light .btn-rst-bar{border-color:#ddd;color:#888}
+html.light .btn-rst-bar:hover{background:var(--rose);color:#fff;border-color:var(--rose)}
+html.light .twrap{border-color:#e8e8e8}
+html.light table thead th{background:#f5f5f5;color:#999;border-bottom-color:#e8e8e8}
+html.light table thead th:hover{background:#ffe8f2;color:var(--rose)}
+html.light table tbody tr{border-bottom-color:#f0f0f0}
+html.light table tbody tr:hover{background:#fff8fb}
+html.light table tbody td{color:#444}
+html.light .badge.b-live{background:#e8f9f4;color:#007a4d;border-color:#b0e8d0}
+html.light .badge.b-wip{background:#fff8e6;color:#a06000;border-color:#ffd580}
+html.light .badge.b-paused{background:#fff0f5;color:#c0004e;border-color:#ffc0d8}
+html.light .badge.b-inactive{background:#f5f5f5;color:#888;border-color:#ddd}
+html.light .badge.b-draft{background:#f0f0ff;color:#3030a0;border-color:#c0c0f0}
+html.light .pill-mkt{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+html.light .pill-dest{background:#e8f9f9;color:#007a7c;border-color:#b0e8e8}
+html.light .pill-sheet{background:#f5f5f5;color:#888;border-color:#ddd}
+html.light .dest-tag{background:#e8f9f9;color:#007a7c;border-color:#b0e8e8}
+html.light .dest-dropdown{background:#fff;border-color:#ddd;box-shadow:0 6px 20px #00000018}
+html.light .dest-option{color:#333}
+html.light .dest-option:hover{background:#fff0f5;color:var(--rose)}
+html.light .cities-list li{color:#555}
+html.light .cities-list li::before{color:var(--rose)}
+html.light .lang-t{color:#888}
+html.light .edit-icon{background:var(--teal)}
+html.light .cities-edit-icon{background:var(--teal)}
+html.light .img-edit-icon{background:#FF8C00}
+html.light .prev-btn{background:linear-gradient(135deg,var(--rose),#c0004e)}
+html.light .prev-pencil{background:var(--rose)}
+html.light .copy-row-btn{background:#f5f5f5;border-color:#ddd;color:#666}
+html.light .copy-row-btn:hover{background:var(--rose);border-color:var(--rose);color:#fff}
+html.light .frame-text{color:#1a1a1a}
+html.light .frame-cell:hover .frame-text{background:#fff0f5;border-color:#ffc0d8}
+html.light .frame-text[contenteditable="true"]{background:#fff8fb !important;border-color:var(--rose) !important}
+html.light .img-cell a{color:#007a7c}
+html.light .img-cell span{color:#666}
+html.light .history-panel{background:#fff;border-left-color:var(--rose)}
+html.light .hp-hdr{background:#fff0f5}
+html.light .hp-title{color:#1a1a1a}
+html.light .hist-item{border-bottom-color:#f0f0f0}
+html.light .hist-user{color:#007a7c}
+html.light .hist-sheet{background:#f5f5f5;color:var(--rose);border-color:#ddd}
+html.light .hist-desc{color:#444}
+html.light .hist-old{color:#aaa}
+html.light .hist-arrow{color:var(--rose)}
+html.light .hist-new{color:#007a4d}
+html.light .modal{background:#fff;border-color:var(--rose)}
+html.light .modal-hdr{background:#fff0f5}
+html.light .modal-title{color:#1a1a1a}
+html.light .mfield input,.html.light .mfield textarea,.html.light .mfield select{background:#f8f8f8;border-color:#ddd;color:#1a1a1a}
+html.light .mfield label{color:#888}
+html.light .mfield-note{color:#aaa}
+html.light .btn-modal-cancel{background:#f5f5f5;color:#666;border-color:#ddd !important}
+html.light .img-row-fields input{background:#f8f8f8;border-color:#ddd;color:#1a1a1a}
+html.light .img-row-del{border-color:#ddd;color:#aaa}
+html.light .btn-add-img-row{border-color:#ddd;color:#888}
+html.light .btn-add-img-row:hover{border-color:var(--teal);color:var(--teal)}
+html.light .footer{background:#ffffff;border-top:1px solid #e8e8e8}
+html.light .f-left,.html.light .f-right{color:#aaa}
+html.light .nores-t{color:#1a1a1a}
+html.light .nores-s{color:#888}
+html.light .prev-dialog{background:#fff;border-color:var(--rose)}
+html.light .prev-dialog input{background:#f8f8f8;border-color:#ddd;color:#1a1a1a}
+html.light .inrow-dd-select{background:#fff;border-color:#ddd;color:#333}
+html.light .inrow-dd-select option{background:#fff}
+
+/* ── COLUMN PICKER ── */
+.col-picker-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl)}
+.col-picker-label{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-family:'DM Mono',monospace;margin-right:2px;white-space:nowrap}
+.col-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;font-family:'Epilogue',sans-serif;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text3);transition:all .12s;user-select:none;white-space:nowrap}
+.col-pill:hover{border-color:var(--text2);color:var(--text2)}
+.col-pill.active{background:var(--rose);border-color:var(--rose);color:#fff}
+.col-pill.locked{opacity:.5;cursor:default}
+.col-pill .pill-check{font-size:9px}
+html.light .col-picker-bar{background:#f8f8f8;border-color:#e0e0e0}
+html.light .col-pill{background:#fff;border-color:#ddd;color:#888}
+html.light .col-pill:hover{border-color:#999;color:#444}
+html.light .col-pill.active{background:var(--rose);border-color:var(--rose);color:#fff}
+
+/* ── EXPAND ROW ── */
+.expand-btn{width:22px;height:22px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);color:var(--text3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;transition:all .15s;flex-shrink:0;font-family:'DM Mono',monospace;line-height:1}
+.expand-btn:hover{background:var(--rose);border-color:var(--rose);color:#fff}
+.expand-btn.open{background:var(--rose);border-color:var(--rose);color:#fff;transform:rotate(90deg)}
+.expand-row{display:none}
+.expand-row.open{display:table-row}
+.expand-panel{background:var(--bg2);border-top:1px solid var(--border)}
+.expand-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;padding:14px 16px}
+.expand-section{background:var(--bg3);border-radius:var(--rl);padding:10px 12px;border:1px solid var(--border)}
+.expand-sec-title{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-family:'DM Mono',monospace;margin-bottom:8px}
+.expand-field{margin-bottom:6px}
+.expand-field-label{font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px}
+.expand-field-val{font-size:11.5px;color:var(--text2);line-height:1.4}
+.expand-frame-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+html.light .expand-panel{background:#fafafa}
+html.light .expand-section{background:#fff;border-color:#e8e8e8}
+html.light .expand-sec-title{color:#aaa}
+html.light .expand-field-label{color:#aaa}
+html.light .expand-field-val{color:#333}
+.theme-switcher{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--bg2);border-top:1px solid var(--border)}
+.ts-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;font-family:'DM Mono',monospace}
+.ts-track{width:44px;height:24px;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;cursor:pointer;position:relative;transition:background .2s,border-color .2s;flex-shrink:0}
+.ts-thumb{width:18px;height:18px;background:var(--text3);border-radius:50%;position:absolute;top:2px;left:2px;transition:transform .2s,background .2s}
+html.light .ts-track{background:#ffe8f2;border-color:var(--rose)}
+html.light .ts-thumb{background:var(--rose);transform:translateX(20px)}
+html.light .theme-switcher{background:#fff;border-top:1px solid #e8e8e8}
+html.light .ts-label{color:#aaa}
+.ts-icon{font-size:14px}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Epilogue',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
 body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(circle,#5C004920 1px,transparent 1px);background-size:28px 28px;pointer-events:none;z-index:0}
 .shell{position:relative;z-index:1}
 
 /* HEADER */
-.hdr{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:60px;background:var(--dp);border-bottom:1.5px solid var(--rose);flex-wrap:wrap;gap:8px}
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:66px;background:var(--dp);border-bottom:1.5px solid var(--rose);flex-wrap:wrap;gap:8px}
 .hdr-logo{display:flex;align-items:center;gap:14px;text-decoration:none}
 .logo-svg{display:block;height:20px;width:auto;flex-shrink:0}
 .logo-divider{width:1px;height:26px;background:var(--border2);flex-shrink:0}
@@ -90,10 +237,14 @@ tbody tr:last-child{border-bottom:none}
 tbody tr:hover{background:#3d003530}
 tbody td{padding:6px 9px;color:var(--text2);vertical-align:middle}
 
-/* FRAME DROPDOWN in header */
-.th-frame-wrap{display:flex;align-items:center;gap:6px;white-space:nowrap}
-.frame-sel{background:var(--bg3);border:1px solid var(--border2);border-radius:3px;color:var(--teal);font-size:10px;font-family:'DM Mono',monospace;padding:2px 5px;outline:none;cursor:pointer}
-.frame-sel option{background:var(--dp)}
+/* INLINE DROPDOWN (CP, Crimtan, Format) */
+.inrow-dd-select{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:4px 6px;font-size:11px;color:var(--text2);outline:none;cursor:pointer;font-family:'Epilogue',sans-serif;min-width:100px;max-width:140px;width:auto;transition:border-color .12s}
+.inrow-dd-select:focus{border-color:var(--rose)}
+.inrow-dd-select option{background:var(--dp);color:var(--text);padding:4px}
+.dd-cp{border-color:#00B5B840;min-width:80px}
+.dd-ct{border-color:#FFD16640;min-width:100px}
+.dd-fmt{border-color:#FF006E30;min-width:130px}
+.th-frame{white-space:nowrap;min-width:110px}
 
 /* BADGES */
 .badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
@@ -264,35 +415,7 @@ tbody tr:hover .copy-row-btn{opacity:1}
 <!-- HEADER -->
 <header class="hdr">
   <a class="hdr-logo" href="#">
-    <!-- Crimtan logo: flower icon + wordmark -->
-    <svg width="110" height="28" viewBox="0 0 110 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- flower/pinwheel icon -->
-      <defs>
-        <linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FF2D78"/><stop offset="100%" stop-color="#C0007A"/></linearGradient>
-        <linearGradient id="lg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FF2D78"/><stop offset="100%" stop-color="#9B0090"/></linearGradient>
-        <linearGradient id="lg3" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#8B006E"/><stop offset="100%" stop-color="#D4006E"/></linearGradient>
-      </defs>
-      <!-- 6 petals rotated around center (14,14) -->
-      <!-- petal shape: rounded triangle pointing outward -->
-      <g transform="translate(14,14)">
-        <!-- top-right bright petal -->
-        <path d="M1,-2 Q5,-9 10,-6 Q8,-1 3,1 Z" fill="url(#lg1)" transform="rotate(0)"/>
-        <!-- right petal -->
-        <path d="M1,-2 Q5,-9 10,-6 Q8,-1 3,1 Z" fill="url(#lg1)" transform="rotate(60)"/>
-        <!-- bottom-right -->
-        <path d="M1,-2 Q5,-9 10,-6 Q8,-1 3,1 Z" fill="url(#lg2)" transform="rotate(120)"/>
-        <!-- bottom-left darker -->
-        <path d="M1,-2 Q5,-9 10,-6 Q8,-1 3,1 Z" fill="url(#lg3)" transform="rotate(180)"/>
-        <!-- left -->
-        <path d="M1,-2 Q5,-9 10,-6 Q8,-1 3,1 Z" fill="url(#lg3)" transform="rotate(240)"/>
-        <!-- top-left -->
-        <path d="M1,-2 Q5,-9 10,-6 Q8,-1 3,1 Z" fill="url(#lg2)" transform="rotate(300)"/>
-        <!-- center dot -->
-        <circle cx="0" cy="0" r="1.5" fill="#1a0018"/>
-      </g>
-      <!-- wordmark "crimtan" -->
-      <text x="30" y="19" font-family="'Epilogue',sans-serif" font-size="13.5" font-weight="700" letter-spacing="-0.3" fill="white">crimtan</text>
-    </svg>
+    <img id="ct-logo" src="data:image/png;base64,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" alt="Crimtan" style="height:34px;width:auto;flex-shrink:0;display:block">
     <div class="logo-divider"></div>
     <div>
       <div class="logo-client">Cathay Pacific</div>
@@ -312,6 +435,14 @@ tbody tr:hover .copy-row-btn{opacity:1}
       <span>📋 History</span>
       <span class="dot-notif" id="hist-notif"></span>
     </button>
+    <!-- THEME SWITCHER in header -->
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="font-size:13px;line-height:1">🌙</span>
+      <div class="ts-track" id="ts-track" onclick="toggleTheme()" title="Toggle light/dark theme">
+        <div class="ts-thumb" id="ts-thumb"></div>
+      </div>
+      <span style="font-size:13px;line-height:1">☀️</span>
+    </div>
     <div class="cntbadge" id="hbadge">— creatives</div>
   </div>
 </header>
@@ -354,32 +485,23 @@ tbody tr:hover .copy-row-btn{opacity:1}
       <select id="f-lang" onchange="render()"><option value="">All languages</option></select>
       <button class="btn-rst-bar" onclick="resetFilters()">↺ Reset</button>
     </div>
+    <!-- COLUMN PICKER -->
+    <div class="col-picker-bar">
+      <span class="col-picker-label">Columns:</span>
+      <span class="col-pill locked active" data-col="core" title="Always visible">🔒 Core</span>
+      <span class="col-pill active" data-col="cp" onclick="toggleCol(this,'cp')"><span class="pill-check">✓</span> CX</span>
+      <span class="col-pill active" data-col="crimtan" onclick="toggleCol(this,'crimtan')"><span class="pill-check">✓</span> Crimtan</span>
+      <span class="col-pill" data-col="language" onclick="toggleCol(this,'language')"><span class="pill-check">+</span> Language</span>
+      <span class="col-pill" data-col="images" onclick="toggleCol(this,'images')"><span class="pill-check">+</span> Preferred Images</span>
+      <span class="col-pill" data-col="tnc" onclick="toggleCol(this,'tnc')"><span class="pill-check">+</span> T&amp;C Ad Copy</span>
+      <span class="col-pill" data-col="frames" onclick="toggleCol(this,'frames')"><span class="pill-check">+</span> All Frames (1–5)</span>
+      <span class="col-pill" data-col="feedback" onclick="toggleCol(this,'feedback')"><span class="pill-check">+</span> Feedback</span>
+      <span class="col-pill active" data-col="format" onclick="toggleCol(this,'format')"><span class="pill-check">✓</span> Format</span>
+    </div>
     <div class="twrap">
       <table>
         <thead>
-          <tr>
-            <th id="th-status" onclick="sortBy('status')">Status</th>
-            <th id="th-sheet" onclick="sortBy('sheet')">Sheet</th>
-            <th id="th-season" onclick="sortBy('season')">Season</th>
-            <th id="th-market" onclick="sortBy('market')">Market</th>
-            <th id="th-destination" onclick="sortBy('destination')">Destination</th>
-            <th>Cities</th>
-            <th id="th-language" onclick="sortBy('language')">Language</th>
-            <th>Preferred Images</th>
-            <th>
-              <div class="th-frame-wrap">
-                <span>Ad Copy</span>
-                <select class="frame-sel" id="frame-selector" onchange="render()">
-                  <option value="0">Frame 1</option>
-                  <option value="1">Frame 2</option>
-                  <option value="2">Frame 3</option>
-                  <option value="3">Frame 4</option>
-                  <option value="4">Frame 5</option>
-                </select>
-              </div>
-            </th>
-            <th>Preview</th>
-            <th style="width:32px"></th>
+          <tr id="thead-tr">
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -394,24 +516,21 @@ tbody tr:hover .copy-row-btn{opacity:1}
 
 <!-- FOOTER -->
 <footer class="footer">
-  <div class="f-left">
-    <svg width="62" height="16" viewBox="0 0 110 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:.55">
-      <defs>
-        <linearGradient id="flg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FF2D78"/><stop offset="100%" stop-color="#C0007A"/></linearGradient>
-        <linearGradient id="flg2" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#8B006E"/><stop offset="100%" stop-color="#D4006E"/></linearGradient>
-      </defs>
-      <g transform="translate(14,14)">
-        <path d="M1,-2 Q5,-9 10,-6 Q8,-1 3,1 Z" fill="url(#flg1)" transform="rotate(0)"/>
-        <path d="M1,-2 Q5,-9 10,-6 Q8,-1 3,1 Z" fill="url(#flg1)" transform="rotate(60)"/>
-        <path d="M1,-2 Q5,-9 10,-6 Q8,-1 3,1 Z" fill="url(#flg1)" transform="rotate(120)"/>
-        <path d="M1,-2 Q5,-9 10,-6 Q8,-1 3,1 Z" fill="url(#flg2)" transform="rotate(180)"/>
-        <path d="M1,-2 Q5,-9 10,-6 Q8,-1 3,1 Z" fill="url(#flg2)" transform="rotate(240)"/>
-        <path d="M1,-2 Q5,-9 10,-6 Q8,-1 3,1 Z" fill="url(#flg1)" transform="rotate(300)"/>
-        <circle cx="0" cy="0" r="1.5" fill="#1a0018"/>
-      </g>
-      <text x="30" y="19" font-family="'Epilogue',sans-serif" font-size="13.5" font-weight="700" letter-spacing="-0.3" fill="white">crimtan</text>
-    </svg>
-    × Cathay Pacific — Creative Hub · <span id="fdate"></span>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div class="f-left">
+      <svg width="58" height="16" viewBox="0 0 122 34" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:.45">
+        <defs><linearGradient id="ft-g" x1="17" y1="0" x2="17" y2="34" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FF1477"/><stop offset="100%" stop-color="#8B0080"/></linearGradient></defs>
+        <path d="M17 3 C14.5 3 12 5.5 13 9.5 C14.5 8.5 15.5 7 17 6.5 C18.5 7 19.5 8.5 21 9.5 C22 5.5 19.5 3 17 3 Z" fill="url(#ft-g)"/>
+        <path d="M26.5 7.5 C24.5 5.5 21.5 5.5 19.5 8 C21 9 22.5 9 24 10.5 C25.5 12 25.5 13.5 26.5 15 C29.5 13.5 29 9.5 26.5 7.5 Z" fill="url(#ft-g)"/>
+        <path d="M29 19 C29 22 26.5 24.5 23.5 24 C23.5 22.5 24 21 23.5 19.5 C23 18 21.5 17 21 15.5 C24 13.5 29 15.5 29 19 Z" fill="url(#ft-g)"/>
+        <path d="M17 31 C19.5 31 22 28.5 21 24.5 C19.5 25.5 18.5 27 17 27.5 C15.5 27 14.5 25.5 13 24.5 C12 28.5 14.5 31 17 31 Z" fill="url(#ft-g)"/>
+        <path d="M7.5 26.5 C9.5 28.5 12.5 28.5 14.5 26 C13 25 11.5 25 10 23.5 C8.5 22 8.5 20.5 7.5 19 C4.5 20.5 5 24.5 7.5 26.5 Z" fill="url(#ft-g)"/>
+        <path d="M5 15 C5 12 7.5 9.5 10.5 10 C10.5 11.5 10 13 10.5 14.5 C11 16 12.5 17 13 18.5 C10 20.5 5 18.5 5 15 Z" fill="url(#ft-g)"/>
+        <circle cx="17" cy="17" r="4.5" fill="rgba(255,255,255,0.08)"/>
+        <text x="38" y="23" font-family="'Epilogue',Arial,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.5" fill="currentColor">crimtan</text>
+      </svg>
+      × Cathay Pacific — Creative Hub · <span id="fdate"></span>
+    </div>
   </div>
   <div class="f-right">Smarter Programmatic · crimtan.com</div>
 </footer>
@@ -491,6 +610,28 @@ tbody tr:hover .copy-row-btn{opacity:1}
 </div>
 
 <script>
+// ── THEME ──
+const LOGO_DARK = "data:image/png;base64,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";
+const LOGO_LIGHT = "data:image/png;base64,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";
+
+function toggleTheme() {
+  const isLight = document.documentElement.classList.toggle('light');
+  document.getElementById('ts-label') && (document.getElementById('ts-label').textContent = isLight ? 'Light' : 'Dark');
+  const logo = document.getElementById('ct-logo');
+  if (logo) logo.src = isLight ? LOGO_LIGHT : LOGO_DARK;
+  localStorage.setItem('ct-theme', isLight ? 'light' : 'dark');
+}
+// restore saved theme
+if (localStorage.getItem('ct-theme') === 'light') {
+  document.documentElement.classList.add('light');
+  document.addEventListener('DOMContentLoaded', () => {
+    const lbl = document.getElementById('ts-label');
+    if (lbl) lbl.textContent = 'Light';
+    const logo = document.getElementById('ct-logo');
+    if (logo) logo.src = LOGO_LIGHT;
+  });
+}
+
 document.getElementById('fdate').textContent = new Date().toLocaleDateString('en-GB',{year:'numeric',month:'long'});
 
 // ── DATA (injected) ──
@@ -513,7 +654,17 @@ Object.entries(RAW_DATA).forEach(([sh, rows]) => {
 // mutable copy of frames/preview per rowId
 const overrides = {}; // rowId -> {frames:[], preview:''}
 ALL_ROWS.forEach(r => {
-  overrides[r._rowId] = {frames:[...r.frames], preview:r.preview, images:r.images||'', destination:r.destination, cities:r.cities||''};
+  overrides[r._rowId] = {
+    frames: [...r.frames, ''], // index 5 = T&C ad copy
+    preview: r.preview,
+    images: r.images||'',
+    destination: r.destination,
+    cities: r.cities||'',
+    cp: 'active',
+    crimtan: 'in progress',
+    format: 'Standard Carousel',
+    feedback: '',
+  };
 });
 
 function getRow(r) {
@@ -641,12 +792,20 @@ function toggleHistory() {
   }
 }
 
+// ── INLINE DROPDOWN SAVE ──
+function saveInlineDD(rowId, field, val, label) {
+  const old = overrides[rowId][field]||'';
+  overrides[rowId][field] = val;
+  const r = ALL_ROWS.find(x=>x._rowId===rowId);
+  if (r && val !== old) logEdit(r.sheet, `${r.market}/${r.destination}`, label, old, val);
+}
+
 // ── FRAME EDITING ──
 let _frameOriginal = '';
 
 function makeEditable(el, rowId, frameIdx, sheet, rowInfo) {
   if (el.contentEditable === 'true') return;
-  _frameOriginal = overrides[rowId].frames[frameIdx] || '';
+  _frameOriginal = frameIdx === -1 ? (overrides[rowId].feedback||'') : (overrides[rowId].frames[frameIdx]||'');
   el.contentEditable = 'true';
   el.focus();
   const range = document.createRange();
@@ -670,10 +829,14 @@ function makeEditable(el, rowId, frameIdx, sheet, rowInfo) {
 
 function saveFrame(el, rowId, frameIdx, sheet, rowInfo) {
   const newVal = el.textContent.trim();
-  const oldVal = overrides[rowId].frames[frameIdx] || '';
+  const field = frameIdx === -1 ? 'feedback' : null;
+  const oldVal = field ? (overrides[rowId][field]||'') : (overrides[rowId].frames[frameIdx]||'');
   el.onblur = null;
   el.contentEditable = 'false';
-  if (newVal !== oldVal) { overrides[rowId].frames[frameIdx] = newVal; logEdit(sheet, rowInfo, `Frame ${frameIdx+1}`, oldVal, newVal); }
+  if (newVal !== oldVal) {
+    if (field) { overrides[rowId][field] = newVal; logEdit(sheet, rowInfo, 'Feedback', oldVal, newVal); }
+    else { overrides[rowId].frames[frameIdx] = newVal; logEdit(sheet, rowInfo, `Frame ${frameIdx+1}`, oldVal, newVal); }
+  }
 }
 
 // ── IMAGES EDITING ──
@@ -1037,13 +1200,95 @@ function saveCopyModal() {
   render();
 }
 
+// ── COLUMN VISIBILITY ──
+const COL_VIS = {
+  cp: true, crimtan: true,
+  images: false, tnc: false, frames: false, feedback: false, format: true,
+  language: false
+};
+
+function toggleCol(pill, col) {
+  COL_VIS[col] = !COL_VIS[col];
+  pill.classList.toggle('active', COL_VIS[col]);
+  pill.querySelector('.pill-check').textContent = COL_VIS[col] ? '✓' : '+';
+  render();
+}
+
+// ── EXPAND ROW STATE ──
+const expandedRows = new Set();
+
+function toggleExpand(rowId) {
+  const btn = document.getElementById('exp-btn-'+rowId);
+  const row = document.getElementById('exp-row-'+rowId);
+  if (!btn || !row) return;
+  const isOpen = expandedRows.has(rowId);
+  if (isOpen) {
+    expandedRows.delete(rowId);
+    btn.classList.remove('open');
+    row.classList.remove('open');
+  } else {
+    expandedRows.add(rowId);
+    btn.classList.add('open');
+    row.classList.add('open');
+    // populate expand panel
+    buildExpandPanel(rowId);
+  }
+}
+
+function buildExpandPanel(rowId) {
+  const r = ALL_ROWS.find(x=>x._rowId===rowId);
+  const o = overrides[rowId];
+  if (!r||!o) return;
+  const panel = document.getElementById('exp-panel-'+rowId);
+  if (!panel) return;
+
+  const frameNames = ['Frame 1','Frame 2','Frame 3','Frame 4','Frame 5'];
+  const framesHtml = frameNames.map((name,i) => {
+    const val = o.frames[i]||'';
+    if (!val) return '';
+    return `<div class="expand-field">
+      <div class="expand-field-label">${name}</div>
+      <div class="expand-field-val">${val}</div>
+    </div>`;
+  }).filter(Boolean).join('') || '<div style="color:var(--text3);font-size:11px">No frame copy yet</div>';
+
+  const imagesHtml = o.images
+    ? o.images.split('\n').filter(l=>l.trim()).map(l=>{
+        const url=(l.match(/https?:\/\/[^\s]+/)||[''])[0];
+        const label=l.replace(/https?:\/\/[^\s]+/g,'').trim()||'Link';
+        return url
+          ? `<div style="font-size:10.5px;margin-bottom:3px"><a href="${url}" target="_blank" style="color:var(--teal);text-decoration:none">🔗 ${label}</a></div>`
+          : `<div style="font-size:10.5px;color:var(--text3);margin-bottom:3px">${l}</div>`;
+      }).join('')
+    : '<div style="color:var(--text3);font-size:11px">—</div>';
+
+  panel.innerHTML = `<div class="expand-grid">
+    <div class="expand-section">
+      <div class="expand-sec-title">📋 Status details</div>
+      <div class="expand-field"><div class="expand-field-label">CX</div><div class="expand-field-val">${o.cp||'active'}</div></div>
+      <div class="expand-field"><div class="expand-field-label">Crimtan</div><div class="expand-field-val">${o.crimtan||'in progress'}</div></div>
+      <div class="expand-field"><div class="expand-field-label">Format</div><div class="expand-field-val">${o.format||'Standard Carousel'}</div></div>
+      <div class="expand-field"><div class="expand-field-label">Feedback</div><div class="expand-field-val">${o.feedback||'—'}</div></div>
+    </div>
+    <div class="expand-section">
+      <div class="expand-sec-title">✍️ Ad Copy (all frames)</div>
+      <div class="expand-frame-grid">${framesHtml}</div>
+      ${o.frames[5]?`<div class="expand-field" style="margin-top:6px"><div class="expand-field-label">T&amp;C Ad Copy</div><div class="expand-field-val">${o.frames[5]}</div></div>`:''}
+    </div>
+    <div class="expand-section">
+      <div class="expand-sec-title">🖼 Preferred Images</div>
+      ${imagesHtml}
+    </div>
+  </div>`;
+}
+
 // ── RENDER ──
-let renderedRows = []; // keep ref for inline edit callbacks
+let renderedRows = [];
+let activeSheetTh = 'All'; // used in thead template
 
 function render() {
   populateSels();
-  updateFrameDropdown();
-  const frameIdx = parseInt(document.getElementById('frame-selector').value)||0;
+  activeSheetTh = activeSheet;
   let data = filteredData();
   if (sortK) data = [...data].sort((a,b)=>String(a[sortK]).localeCompare(String(b[sortK]))*sortD);
 
@@ -1053,7 +1298,7 @@ function render() {
   document.getElementById('s-dst').textContent = new Set(data.map(r=>r.destination)).size;
   document.getElementById('hbadge').textContent = `${data.length} creative${data.length!==1?'s':''}`;
   document.getElementById('ct-title').textContent = activeSheet==='All' ? 'All creatives' : activeSheet+' creatives';
-  document.getElementById('ct-sub').textContent = `${data.length} row${data.length!==1?'s':''} shown · hover frame cells to edit`;
+  document.getElementById('ct-sub').textContent = `${data.length} row${data.length!==1?'s':''} shown`;
 
   document.querySelectorAll('.tab-row').forEach(el=>{
     const s=el.dataset.sheet;
@@ -1061,29 +1306,90 @@ function render() {
     const b=el.querySelector('.tab-cnt'); if(b) b.textContent=cnt;
   });
 
+  // rebuild thead dynamically
+  const thead = document.getElementById('thead-tr');
+  if (thead) {
+    const sheetCol = activeSheet==='All' ? '<th onclick="sortBy(\'sheet\')" style="cursor:pointer">Sheet</th>' : '';
+    const cpCol = COL_VIS.cp ? '<th>CX</th>' : '';
+    const ctCol = COL_VIS.crimtan ? '<th>Crimtan</th>' : '';
+    const imgCol = COL_VIS.images ? '<th>Preferred Images</th>' : '';
+    const tncCol = COL_VIS.tnc ? '<th>T&amp;C Ad Copy</th>' : '';
+    const framesCol = COL_VIS.frames ? '<th class="th-frame">Frame 1</th><th class="th-frame">Frame 2</th><th class="th-frame">Frame 3</th><th class="th-frame">Frame 4</th><th class="th-frame">Frame 5</th>' : '';
+    const fbCol = COL_VIS.feedback ? '<th>Feedback</th>' : '';
+    const fmtCol = COL_VIS.format ? '<th>Format</th>' : '';
+    const langCol = COL_VIS.language ? '<th id="th-language" onclick="sortBy(\'language\')" style="cursor:pointer">Language</th>' : '';
+    thead.innerHTML = `
+      <th style="width:22px"></th>
+      <th id="th-status" onclick="sortBy('status')" style="cursor:pointer">Status</th>
+      ${cpCol}${ctCol}
+      ${sheetCol}
+      <th id="th-season" onclick="sortBy('season')" style="cursor:pointer">Season</th>
+      <th id="th-market" onclick="sortBy('market')" style="cursor:pointer">Market</th>
+      <th id="th-destination" onclick="sortBy('destination')" style="cursor:pointer">Destination</th>
+      <th>Cities</th>
+      ${langCol}
+      ${imgCol}${tncCol}${framesCol}${fbCol}${fmtCol}
+      <th>Preview</th>
+      <th style="width:52px"></th>`;
+    if (sortK) {
+      const th = thead.querySelector(`#th-${sortK}`);
+      if (th) th.classList.add('sorted');
+    }
+  }
+
   const tb = document.getElementById('tbody');
   const nr = document.getElementById('nores');
-  // show/hide sheet column header
-  const thSheet = document.getElementById('th-sheet');
-  if (thSheet) thSheet.style.display = activeSheet==='All' ? '' : 'none';
   if (!data.length) { tb.innerHTML=''; nr.style.display='block'; return; }
   nr.style.display='none';
 
   renderedRows = data;
   const allDests = [...new Set(ALL_ROWS.map(r=>r.destination).filter(Boolean))].sort();
-  const copySvg = `<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="9" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M3 3h7v1H3V3z" fill="none"/><rect x="2" y="2" width="9" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="var(--bg3)"/></svg>`;
+  const copySvg = `<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="9" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="2" y="2" width="9" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="var(--bg3)"/></svg>`;
+  const pencilSvg = `<svg viewBox="0 0 14 14"><path d="M9.5 1.5l3 3-7.5 7.5-3.5.5.5-3.5 7.5-7.5z" stroke="white" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 3l3 3" stroke="white" stroke-width="1.2" stroke-linecap="round"/><path d="M2 12l0.3-1.5 1.2 1.2-1.5.3z" fill="white"/></svg>`;
+  const pencilSmSvg = pencilSvg;
+
+  const CP_OPTS = ['active','paused'];
+  const CT_OPTS = ['done','in progress'];
+  const FORMAT_OPTS = ['Standard Carousel','Interactive','Price Ads','Social Display'];
+
+  function inlineDD(rowId, field, opts, currentVal, colorClass) {
+    const safe = rowId.replace(/'/g,"\\'");
+    const options = opts.map(v=>`<option${v===currentVal?' selected':''}>${v}</option>`).join('');
+    return `<select class="inrow-dd-select ${colorClass||''}" onchange="saveInlineDD('${safe}','${field}',this.value,'${field}')">${options}</select>`;
+  }
+
+  function makeFrameCell(rowId, frameIdx, sheet, rowInfo, frameVal) {
+    const safe = rowId.replace(/'/g,"\\'");
+    const safeS = sheet.replace(/'/g,"\\'");
+    const safeI = rowInfo.replace(/'/g,"\\'");
+    return `<div class="frame-cell">
+      <div class="frame-text" onclick="makeEditable(this,'${safe}',${frameIdx},'${safeS}','${safeI}')">${frameVal||'<span style="color:var(--text3)">—</span>'}</div>
+      <span class="edit-icon">${pencilSvg}</span>
+      <button class="save-btn" onclick="saveFrame(this.previousElementSibling.previousElementSibling,'${safe}',${frameIdx},'${safeS}','${safeI}')">✓ Save</button>
+    </div>`;
+  }
+
+  function feedbackCell(rowId, sheet, rowInfo, val) {
+    const safe = rowId.replace(/'/g,"\\'");
+    const safeS = sheet.replace(/'/g,"\\'");
+    const safeI = rowInfo.replace(/'/g,"\\'");
+    return `<div class="frame-cell" style="min-width:120px">
+      <div class="frame-text" onclick="makeEditable(this,'${safe}',-1,'${safeS}','${safeI}')">${val||'<span style="color:var(--text3)">—</span>'}</div>
+      <span class="edit-icon">${pencilSvg}</span>
+      <button class="save-btn" onclick="saveFrame(this.previousElementSibling.previousElementSibling,'${safe}',-1,'${safeS}','${safeI}')">✓ Save</button>
+    </div>`;
+  }
 
   tb.innerHTML = data.map((r) => {
     const o = overrides[r._rowId];
-    const frameText = o.frames[frameIdx] || '';
     const rowInfo = `${r.market} / ${r.destination} / ${r.season}`;
     const safeId = r._rowId.replace(/'/g,"\\'");
     const safeSheet = r.sheet.replace(/'/g,"\\'");
     const safeInfo = rowInfo.replace(/'/g,"\\'");
     const destVal = o.destination || r.destination;
     const citiesVal = o.cities !== undefined ? o.cities : (r.cities||'');
+    const isExpanded = expandedRows.has(r._rowId);
 
-    // Destination dropdown-tag
     const destCell = `<div class="dest-cell">
       <div class="dest-tag" onclick="toggleDestDropdown('${safeId}');event.stopPropagation()">
         ${destVal||'—'}<span class="dest-arrow">▾</span>
@@ -1093,16 +1399,12 @@ function render() {
       </div>
     </div>`;
 
-    // Cities with bullet points + edit
-    const pencilSmSvg = `<svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 1.5l3 3-7.5 7.5-3.5.5.5-3.5 7.5-7.5z" stroke="white" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 3l3 3" stroke="white" stroke-width="1.2" stroke-linecap="round"/><path d="M2 12l0.3-1.5 1.2 1.2-1.5.3z" fill="white"/></svg>`;
     const citiesCell = `<div class="cities-cell">
       <div class="cities-display">${renderCities(citiesVal)}</div>
       <div class="cities-edit-icon" style="pointer-events:all;cursor:pointer" onclick="editCities('${safeId}','${safeSheet}','${safeInfo}',this)">${pencilSmSvg}</div>
       <button class="cities-save-btn">✓ Save</button>
     </div>`;
 
-    // Preview
-    const pencilSvg = `<svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 1.5l3 3-7.5 7.5-3.5.5.5-3.5 7.5-7.5z" stroke="white" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 3l3 3" stroke="white" stroke-width="1.2" stroke-linecap="round"/><path d="M2 12l0.3-1.5 1.2 1.2-1.5.3z" fill="white"/></svg>`;
     let prevHtml;
     if (o.preview) {
       prevHtml = `<div class="preview-cell"><a class="prev-btn" href="${o.preview}" target="_blank"><svg viewBox="0 0 10 10"><polygon points="2,1 9,5 2,9"/></svg>Preview</a><button class="prev-pencil" onclick="openPreviewDialog('${safeId}',this.parentElement,'${safeSheet}','${safeInfo}');event.stopPropagation()">${pencilSvg}</button></div>`;
@@ -1110,37 +1412,59 @@ function render() {
       prevHtml = `<div class="preview-cell"><button class="prev-edit-btn" onclick="openPreviewDialog('${safeId}',this,'${safeSheet}','${safeInfo}')">+ Add link</button><button class="prev-pencil" onclick="openPreviewDialog('${safeId}',this.parentElement,'${safeSheet}','${safeInfo}');event.stopPropagation()">${pencilSvg}</button></div>`;
     }
 
-    return `<tr>
+    // optional columns
+    const cpTd = COL_VIS.cp ? `<td>${inlineDD(r._rowId,'cp',CP_OPTS,o.cp||'active','dd-cp')}</td>` : '';
+    const ctTd = COL_VIS.crimtan ? `<td>${inlineDD(r._rowId,'crimtan',CT_OPTS,o.crimtan||'in progress','dd-ct')}</td>` : '';
+    const imgTd = COL_VIS.images ? `<td>${renderImages(o.images, r._rowId, r.sheet, rowInfo)}</td>` : '';
+    const tncTd = COL_VIS.tnc ? `<td>${makeFrameCell(r._rowId, 5, r.sheet, rowInfo, o.frames[5]||'')}</td>` : '';
+    const framesTd = COL_VIS.frames ? `
+      <td>${makeFrameCell(r._rowId, 0, r.sheet, rowInfo, o.frames[0]||'')}</td>
+      <td>${makeFrameCell(r._rowId, 1, r.sheet, rowInfo, o.frames[1]||'')}</td>
+      <td>${makeFrameCell(r._rowId, 2, r.sheet, rowInfo, o.frames[2]||'')}</td>
+      <td>${makeFrameCell(r._rowId, 3, r.sheet, rowInfo, o.frames[3]||'')}</td>
+      <td>${makeFrameCell(r._rowId, 4, r.sheet, rowInfo, o.frames[4]||'')}</td>` : '';
+    const fbTd = COL_VIS.feedback ? `<td>${feedbackCell(r._rowId, r.sheet, rowInfo, o.feedback||'')}</td>` : '';
+    const fmtTd = COL_VIS.format ? `<td>${inlineDD(r._rowId,'format',FORMAT_OPTS,o.format||'Standard Carousel','dd-fmt')}</td>` : '';
+    const langTd = COL_VIS.language ? `<td class="lang-t">${r.language||'—'}</td>` : '';
+
+    // count visible optional cols for expand panel colspan
+    const colCount = 7
+      + (activeSheet==='All'?1:0)
+      + (COL_VIS.cp?1:0) + (COL_VIS.crimtan?1:0)
+      + (COL_VIS.language?1:0)
+      + (COL_VIS.images?1:0) + (COL_VIS.tnc?1:0)
+      + (COL_VIS.frames?5:0)
+      + (COL_VIS.feedback?1:0) + (COL_VIS.format?1:0);
+
+    return `<tr class="data-row">
+      <td style="padding:4px 6px">
+        <button class="expand-btn${isExpanded?' open':''}" id="exp-btn-${r._rowId}" onclick="toggleExpand('${safeId}')" title="Show details">${isExpanded?'›':'›'}</button>
+      </td>
       <td><span class="badge ${BC[r.status]||'b-draft'}"><span class="dot ${DC[r.status]||'d-draft'}"></span>${r.status}</span></td>
+      ${cpTd}${ctTd}
       ${activeSheet==='All'?`<td><span class="pill-sheet">${r.sheet}</span></td>`:''}
       <td style="color:var(--text);font-weight:500;font-size:11px;white-space:nowrap">${r.season}</td>
       <td><span class="pill-mkt">${r.market}</span></td>
       <td>${destCell}</td>
       <td>${citiesCell}</td>
-      <td class="lang-t">${r.language||'—'}</td>
-      <td>${renderImages(o.images, r._rowId, r.sheet, rowInfo)}</td>
-      <td>
-        <div class="frame-cell">
-          <div class="frame-text" onclick="makeEditable(this,'${safeId}',${frameIdx},'${safeSheet}','${safeInfo}')">${frameText||'<span style="color:var(--text3)">—</span>'}</div>
-          <span class="edit-icon"><svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 1.5l3 3-7.5 7.5-3.5.5.5-3.5 7.5-7.5z" stroke="white" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 3l3 3" stroke="white" stroke-width="1.2" stroke-linecap="round"/><path d="M2 12l0.3-1.5 1.2 1.2-1.5.3z" fill="white"/></svg></span>
-          <button class="save-btn" onclick="saveFrame(this.previousElementSibling.previousElementSibling,'${safeId}',${frameIdx},'${safeSheet}','${safeInfo}')">✓ Save</button>
-        </div>
-      </td>
+      ${langTd}
+      ${imgTd}${tncTd}${framesTd}${fbTd}${fmtTd}
       <td>${prevHtml}</td>
-      <td style="padding:6px 4px;white-space:nowrap">
-        <div style="display:inline-flex;align-items:center;gap:4px">
-          <div class="copy-row-btn" onclick="openCopyModal('${safeId}')" title="Copy line">
-            <div class="copy-tooltip">Copy line</div>
-            ${copySvg}
-          </div>
-          <div class="copy-row-btn" onclick="openDeleteModal('${safeId}')" title="Delete" style="color:var(--rose)">
-            <div class="copy-tooltip" style="background:var(--rose)">Delete</div>
-            <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="14" height="14"><path d="M3 4h10M6 4V3h4v1M5 4v8a1 1 0 001 1h4a1 1 0 001-1V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 7v3M9 7v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-          </div>
+      <td style="padding:4px 3px;white-space:nowrap">
+        <div style="display:inline-flex;align-items:center;gap:3px">
+          <div class="copy-row-btn" onclick="openCopyModal('${safeId}')" title="Copy line"><div class="copy-tooltip">Copy line</div>${copySvg}</div>
+          <div class="copy-row-btn" onclick="openDeleteModal('${safeId}')" style="color:var(--rose)"><div class="copy-tooltip" style="background:var(--rose)">Delete</div><svg viewBox="0 0 16 16" fill="none" width="13" height="13"><path d="M3 4h10M6 4V3h4v1M5 4v8a1 1 0 001 1h4a1 1 0 001-1V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 7v3M9 7v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></div>
         </div>
       </td>
-    </tr>`;
+    </tr>
+    <tr class="expand-row${isExpanded?' open':''}" id="exp-row-${r._rowId}">
+      <td colspan="${colCount}" class="expand-panel">
+        <div id="exp-panel-${r._rowId}">${isExpanded ? '' : ''}</div>
+      </td>
+    </tr>`
+    + (isExpanded ? `<script>buildExpandPanel('${safeId}')<\/script>` : '');
   }).join('');
+
 }
 
 // ── BUILD TABS ──
