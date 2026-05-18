@@ -27,9 +27,8 @@ const GITHUB_BRANCH = process.env.GITHUB_BRANCH || "main";
 const PROTOTYPE_FILE = "prototype/index.html";
 const PROTOTYPE_PUBLIC_URL = "https://sandbox.crimtan.com/prototypes/travelid-japan/v30/index.html";
 
-// Git repo lives in /app/repo (separate from the app files in /app)
-const REPO_DIR  = path.join(__dirname, "repo");
-const PROTO_PATH = path.join(REPO_DIR, PROTOTYPE_FILE);
+const REPO_DIR      = __dirname;  // server runs from repo root
+const PROTO_PATH    = path.join(__dirname, PROTOTYPE_FILE);
 
 if (!ANTHROPIC_KEY) console.warn("⚠  ANTHROPIC_API_KEY not set");
 if (!GITHUB_TOKEN)  console.warn("⚠  GITHUB_TOKEN not set");
@@ -96,68 +95,39 @@ app.post("/auth/logout", (req, res) => {
 app.get("/auth/check", (req, res) => res.json({ authed: isAuthed(req) }));
 
 // ── Git helpers ───────────────────────────────────────────────────────────────
-// All git commands run in REPO_DIR (/app/repo)
-function git(cmd) {
-  return execSync(cmd, { cwd: REPO_DIR, encoding: "utf-8", env: {
+function git(cmd, cwd = __dirname) {
+  return execSync(cmd, { cwd, encoding: "utf-8", env: {
     ...process.env,
-    GIT_AUTHOR_NAME: "CX Dashboard",
+    GIT_AUTHOR_NAME: "TravelID Editor",
     GIT_AUTHOR_EMAIL: "editor@crimtan.com",
-    GIT_COMMITTER_NAME: "CX Dashboard",
+    GIT_COMMITTER_NAME: "TravelID Editor",
     GIT_COMMITTER_EMAIL: "editor@crimtan.com",
   }}).trim();
 }
 
+async function ensurePrototype() { return ensureRepo(); }
 async function ensureRepo() {
-  const repoUrl = `https://${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git`;
+  if (fs.existsSync(PROTO_PATH)) return; // already in repo
 
-  // If repo already cloned and prototype exists, we're done
-  if (fs.existsSync(path.join(REPO_DIR, ".git")) && fs.existsSync(PROTO_PATH)) {
-    console.log("Repo ready ✓");
-    return;
-  }
-
-  // Clone the repo if not present
-  if (!fs.existsSync(path.join(REPO_DIR, ".git"))) {
-    console.log("Cloning repo…");
-    fs.mkdirSync(REPO_DIR, { recursive: true });
-    try {
-      execSync(`git clone ${repoUrl} ${REPO_DIR}`, {
-        encoding: "utf-8",
-        env: {
-          ...process.env,
-          GIT_AUTHOR_NAME: "CX Dashboard",
-          GIT_AUTHOR_EMAIL: "editor@crimtan.com",
-          GIT_COMMITTER_NAME: "CX Dashboard",
-          GIT_COMMITTER_EMAIL: "editor@crimtan.com",
-        }
-      });
-      console.log("Repo cloned ✓");
-    } catch (err) {
-      console.error("Clone failed:", err.message);
-    }
-  }
-
-  // If prototype still missing after clone, fetch from public URL
-  if (!fs.existsSync(PROTO_PATH)) {
-    console.log("Prototype missing — fetching from public URL…");
-    fs.mkdirSync(path.dirname(PROTO_PATH), { recursive: true });
-    try {
-      const res = await fetch(PROTOTYPE_PUBLIC_URL);
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const html = await res.text();
-      fs.writeFileSync(PROTO_PATH, html, "utf-8");
-      await commitAndPush("Add prototype from sandbox.crimtan.com").catch(console.error);
-      console.log("Prototype fetched and committed ✓");
-    } catch (err) {
-      console.error("Could not fetch prototype:", err.message);
-      fs.writeFileSync(PROTO_PATH, "<html><body style='font-family:sans-serif;padding:40px'><p>Preview unavailable.</p></body></html>", "utf-8");
-    }
+  console.log("Prototype file missing — fetching from public URL…");
+  fs.mkdirSync(path.dirname(PROTO_PATH), { recursive: true });
+  try {
+    const res = await fetch(PROTOTYPE_PUBLIC_URL);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const html = await res.text();
+    fs.writeFileSync(PROTO_PATH, html, "utf-8");
+    // Commit the fetched file
+    await commitAndPush("Add prototype from sandbox.crimtan.com").catch(() => {});
+    console.log("Prototype fetched and committed ✓");
+  } catch (err) {
+    console.error("Could not fetch prototype:", err.message);
+    fs.writeFileSync(PROTO_PATH, "<html><body style='font-family:sans-serif;padding:40px'><p>Preview unavailable — prototype could not be fetched.</p></body></html>", "utf-8");
   }
 }
 
 async function commitAndPush(message) {
   git(`git add ${PROTOTYPE_FILE}`);
-  try { git(`git commit -m "${message.replace(/"/g, "'")}"`); } catch { return; }
+  try { git(`git commit -m "${message.replace(/"/g, "'")}"`); } catch { return; } // nothing to commit
   const repoUrl = `https://${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git`;
   git(`git push ${repoUrl} ${GITHUB_BRANCH}`);
   console.log("Pushed:", message);
@@ -172,7 +142,7 @@ app.get("/prototype/ready", requireAuth, (req, res) => {
 });
 
 app.get("/prototype", requireAuth, async (req, res) => {
-  await ensureRepo();
+  await ensurePrototype();
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
   res.setHeader("Cache-Control", "no-store");
@@ -185,6 +155,7 @@ app.get("/prototype/search", requireAuth, async (req, res) => {
   await ensureRepo();
   const html = fs.readFileSync(PROTO_PATH, "utf-8");
   const lines = html.split("\n");
+  // Find ALL occurrences and return the first 3 contexts
   const contexts = [];
   lines.forEach((line, i) => {
     if (line.toLowerCase().includes(keyword.toLowerCase()) && contexts.length < 3) {
@@ -205,7 +176,8 @@ app.post("/prototype/edit", requireAuth, async (req, res) => {
   undoStack.push(html); if (undoStack.length > 20) undoStack.shift();
   html = html.split(find).join(replace);
   fs.writeFileSync(PROTO_PATH, html, "utf-8");
-  commitAndPush(message || "Content update via CX Dashboard").catch(console.error);
+  // Push to GitHub asynchronously
+  commitAndPush(message || "Content update via TravelID Editor").catch(console.error);
   res.json({ ok: true });
 });
 
@@ -219,7 +191,7 @@ app.post("/prototype/undo", requireAuth, async (req, res) => {
 
 app.post("/prototype/refresh", requireAuth, async (req, res) => {
   try {
-    if (GITHUB_TOKEN && fs.existsSync(path.join(REPO_DIR, ".git"))) {
+    if (GITHUB_TOKEN) {
       const repoUrl = `https://${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git`;
       git(`git fetch ${repoUrl} ${GITHUB_BRANCH}`);
       git(`git checkout FETCH_HEAD -- ${PROTOTYPE_FILE}`);
@@ -244,95 +216,146 @@ app.post("/proxy/anthropic", requireAuth, apiLimit, async (req, res) => {
   } catch (err) { res.status(502).json({ error: "Upstream failed." }); }
 });
 
-// ── Supabase proxy ────────────────────────────────────────────────────────────
-const SUPABASE_URL         = process.env.SUPABASE_URL         || "";
-const SUPABASE_ANON_KEY    = process.env.SUPABASE_ANON_KEY    || "";
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || "";
-
-if (!SUPABASE_URL) console.warn("⚠  SUPABASE_URL not set");
-
-// Helper: call Supabase REST API
-async function supabase(table, { method = "GET", query = "", body = null, useServiceKey = false } = {}) {
-  const url = `${SUPABASE_URL}/rest/v1/${table}${query ? "?" + query : ""}`;
-  const key = useServiceKey ? SUPABASE_SERVICE_KEY : SUPABASE_ANON_KEY;
-  const opts = {
-    method,
-    headers: {
-      "apikey": key,
-      "Authorization": `Bearer ${key}`,
-      "Content-Type": "application/json",
-      "Prefer": method === "GET" ? "return=representation" : "return=representation",
-    },
-  };
-  if (body) opts.body = JSON.stringify(body);
-  const r = await fetch(url, opts);
-  const text = await r.text();
-  try { return { status: r.status, data: JSON.parse(text) }; }
-  catch { return { status: r.status, data: text }; }
-}
-
-// GET /api/data — fetch all live data in one call (used by prototype on load)
-app.get("/api/data", requireAuth, async (req, res) => {
+// ── Supabase PATCH (update) ──────────────────────────────────────────────────
+app.patch("/api/hero_stats/:key", requireAuth, apiLimit, async (req, res) => {
   try {
-    const [heroRes, arrivalsRes, profilesRes, campaignsRes] = await Promise.all([
-      supabase("hero_stats", { query: "select=key,value,label&order=id" }),
-      supabase("arrivals", { query: "select=*&order=total_visitors.desc" }),
-      supabase("market_profiles", { query: "select=*&order=market_code" }),
-      supabase("campaigns", { query: "select=id,name,advertiser,agency,objective,vertical,start_date,end_date,years,markets,formats,impressions,clicks,gross_spend,net_spend,gross_cpm,ctr,vcr,hard_cv,soft_cv&order=start_date.desc" }),
-    ]);
-    res.json({
-      hero_stats: heroRes.data,
-      arrivals: arrivalsRes.data,
-      market_profiles: profilesRes.data,
-      campaigns: campaignsRes.data,
+    const { key } = req.params;
+    const updates = req.body;
+    const result = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/hero_stats?key=eq.${encodeURIComponent(key)}`,
+      { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": process.env.SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${process.env.SUPABASE_SERVICE_KEY}`, "Prefer": "return=representation" }, body: JSON.stringify(updates) }
+    );
+    const data = await result.json();
+    res.status(result.status).json(data);
+  } catch(err) { res.status(502).json({ error: err.message }); }
+});
+
+app.patch("/api/:table", requireAuth, apiLimit, async (req, res) => {
+  try {
+    const { table } = req.params;
+    const { filter_col, filter_val } = req.query;
+    let url = `${process.env.SUPABASE_URL}/rest/v1/${table}`;
+    if (filter_col && filter_val) url += `?${filter_col}=eq.${encodeURIComponent(filter_val)}`;
+    const result = await fetch(url, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "apikey": process.env.SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${process.env.SUPABASE_SERVICE_KEY}`, "Prefer": "return=representation" },
+      body: JSON.stringify(req.body)
     });
-  } catch (err) { res.status(502).json({ error: err.message }); }
+    const data = await result.json();
+    res.status(result.status).json(data);
+  } catch(err) { res.status(502).json({ error: err.message }); }
 });
 
-// GET /api/:table — generic table read (with optional query params forwarded)
-app.get("/api/:table", requireAuth, async (req, res) => {
-  const allowed = ["hero_stats", "arrivals", "market_profiles", "campaigns"];
-  if (!allowed.includes(req.params.table)) return res.status(400).json({ error: "Unknown table" });
-  const query = new URLSearchParams(req.query).toString();
-  const { status, data } = await supabase(req.params.table, { query });
-  res.status(status).json(data);
+app.post("/api/:table", requireAuth, apiLimit, async (req, res) => {
+  try {
+    const { table } = req.params;
+    const result = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/${table}`,
+      { method: "POST", headers: { "Content-Type": "application/json", "apikey": process.env.SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${process.env.SUPABASE_SERVICE_KEY}`, "Prefer": "return=representation" }, body: JSON.stringify(req.body) }
+    );
+    const data = await result.json();
+    res.status(result.status).json(data);
+  } catch(err) { res.status(502).json({ error: err.message }); }
 });
 
-// PATCH /api/:table/:id — update a row (requires service key, admin only)
-app.patch("/api/:table/:id", requireAuth, async (req, res) => {
-  const allowed = ["hero_stats", "arrivals", "market_profiles", "campaigns"];
-  if (!allowed.includes(req.params.table)) return res.status(400).json({ error: "Unknown table" });
-  const { status, data } = await supabase(req.params.table, {
-    method: "PATCH",
-    query: `id=eq.${req.params.id}`,
-    body: req.body,
-    useServiceKey: true,
+app.delete("/api/:table", requireAuth, apiLimit, async (req, res) => {
+  try {
+    const { table } = req.params;
+    const { filter_col, filter_val } = req.query;
+    let url = `${process.env.SUPABASE_URL}/rest/v1/${table}`;
+    if (filter_col && filter_val) url += `?${filter_col}=eq.${encodeURIComponent(filter_val)}`;
+    const result = await fetch(url, {
+      method: "DELETE",
+      headers: { "apikey": process.env.SUPABASE_SERVICE_KEY, "Authorization": `Bearer ${process.env.SUPABASE_SERVICE_KEY}` }
+    });
+    res.status(result.status).json({ ok: result.ok });
+  } catch(err) { res.status(502).json({ error: err.message }); }
+});
+
+// ── Client portal routes ─────────────────────────────────────────────────────
+
+// Serve client portal page (public — auth handled client-side via Supabase)
+app.get("/client", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "client.html"));
+});
+
+// Expose Supabase public config (anon key only — safe to expose)
+app.get("/client/config", (req, res) => {
+  res.json({
+    url: process.env.SUPABASE_URL || "",
+    anonKey: process.env.SUPABASE_ANON_KEY || ""
   });
-  res.status(status).json(data);
 });
 
-// POST /api/:table — insert a new row (requires service key)
-app.post("/api/:table", requireAuth, async (req, res) => {
-  const allowed = ["hero_stats", "arrivals", "market_profiles", "campaigns"];
-  if (!allowed.includes(req.params.table)) return res.status(400).json({ error: "Unknown table" });
-  const { status, data } = await supabase(req.params.table, {
-    method: "POST",
-    body: req.body,
-    useServiceKey: true,
-  });
-  res.status(status).json(data);
+// Serve prototype to authenticated clients
+// Validates Supabase JWT from Authorization header or cookie
+app.get("/client/prototype", async (req, res) => {
+  const token = req.query.token ||
+                req.headers.authorization?.replace("Bearer ", "");
+
+  if (!token) {
+    return res.status(401).send(`<html><body style="font-family:sans-serif;padding:40px;background:#0C0C0E;color:#fff">
+      <p>Session expired. <a href="/client" style="color:#FABA8F">Sign in again</a></p>
+    </body></html>`);
+  }
+
+  // Verify token with Supabase
+  try {
+    const verify = await fetch(process.env.SUPABASE_URL + "/auth/v1/user", {
+      headers: { "apikey": process.env.SUPABASE_ANON_KEY, "Authorization": "Bearer " + token }
+    });
+    if (!verify.ok) throw new Error("Invalid token");
+  } catch {
+    return res.status(401).send(`<html><body style="font-family:sans-serif;padding:40px;background:#0C0C0E;color:#fff">
+      <p>Session expired. <a href="/client" style="color:#FABA8F">Sign in again</a></p>
+    </body></html>`);
+  }
+
+  await ensurePrototype();
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store");
+  res.send(fs.readFileSync(PROTO_PATH, "utf-8"));
 });
 
-// DELETE /api/:table/:id — delete a row (requires service key)
-app.delete("/api/:table/:id", requireAuth, async (req, res) => {
-  const allowed = ["hero_stats", "arrivals", "market_profiles", "campaigns"];
-  if (!allowed.includes(req.params.table)) return res.status(400).json({ error: "Unknown table" });
-  const { status, data } = await supabase(req.params.table, {
-    method: "DELETE",
-    query: `id=eq.${req.params.id}`,
-    useServiceKey: true,
-  });
-  res.status(status).json(data);
+// ── Supabase write routes (PATCH, POST, DELETE) ──────────────────────────────
+app.patch("/api/hero_stats/:key", requireAuth, apiLimit, async (req, res) => {
+  try {
+    const result = await fetch(
+      process.env.SUPABASE_URL + "/rest/v1/hero_stats?key=eq." + encodeURIComponent(req.params.key),
+      { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": process.env.SUPABASE_SERVICE_KEY, "Authorization": "Bearer " + process.env.SUPABASE_SERVICE_KEY, "Prefer": "return=representation" }, body: JSON.stringify(req.body) }
+    );
+    res.status(result.status).json(await result.json());
+  } catch(err) { res.status(502).json({ error: err.message }); }
+});
+
+app.patch("/api/:table", requireAuth, apiLimit, async (req, res) => {
+  try {
+    const { filter_col, filter_val } = req.query;
+    let url = process.env.SUPABASE_URL + "/rest/v1/" + req.params.table;
+    if (filter_col && filter_val) url += "?" + filter_col + "=eq." + encodeURIComponent(filter_val);
+    const result = await fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": process.env.SUPABASE_SERVICE_KEY, "Authorization": "Bearer " + process.env.SUPABASE_SERVICE_KEY, "Prefer": "return=representation" }, body: JSON.stringify(req.body) });
+    res.status(result.status).json(await result.json());
+  } catch(err) { res.status(502).json({ error: err.message }); }
+});
+
+app.post("/api/:table", requireAuth, apiLimit, async (req, res) => {
+  try {
+    const result = await fetch(
+      process.env.SUPABASE_URL + "/rest/v1/" + req.params.table,
+      { method: "POST", headers: { "Content-Type": "application/json", "apikey": process.env.SUPABASE_SERVICE_KEY, "Authorization": "Bearer " + process.env.SUPABASE_SERVICE_KEY, "Prefer": "return=representation" }, body: JSON.stringify(req.body) }
+    );
+    res.status(result.status).json(await result.json());
+  } catch(err) { res.status(502).json({ error: err.message }); }
+});
+
+app.delete("/api/:table", requireAuth, apiLimit, async (req, res) => {
+  try {
+    const { filter_col, filter_val } = req.query;
+    let url = process.env.SUPABASE_URL + "/rest/v1/" + req.params.table;
+    if (filter_col && filter_val) url += "?" + filter_col + "=eq." + encodeURIComponent(filter_val);
+    const result = await fetch(url, { method: "DELETE", headers: { "apikey": process.env.SUPABASE_SERVICE_KEY, "Authorization": "Bearer " + process.env.SUPABASE_SERVICE_KEY } });
+    res.status(result.status).json({ ok: result.ok });
+  } catch(err) { res.status(502).json({ error: err.message }); }
 });
 
 // ── Static frontend ───────────────────────────────────────────────────────────
@@ -341,8 +364,8 @@ app.get("*", (_req, res) => res.sendFile(path.join(__dirname, "public", "index.h
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 ensureRepo().then(() => {
-  app.listen(PORT, () => console.log(`CX Dashboard on :${PORT}`));
+  app.listen(PORT, () => console.log(`TravelID Editor on :${PORT}`));
 }).catch(err => {
   console.error("Boot error:", err);
-  app.listen(PORT, () => console.log(`CX Dashboard on :${PORT} (repo not ready)`));
+  app.listen(PORT, () => console.log(`TravelID Editor on :${PORT} (repo not ready)`));
 });
