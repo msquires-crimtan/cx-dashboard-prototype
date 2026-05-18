@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TravelID Japan — Editor</title>
+<title>CX Dashboard — Editor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.x/tabler-icons.min.css">
@@ -161,7 +161,7 @@
     <img src="/crimtan-logo-white.png" alt="Crimtan" style="height:32px;width:auto;">
   </div>
   <div class="gate-card">
-    <h1>TravelID Japan</h1>
+    <h1>CX Dashboard</h1>
     <p class="gate-sub">AI content editor — authorised access only</p>
     <div>
       <label for="pw">Password</label>
@@ -184,7 +184,7 @@
     <img src="/crimtan-logo-black.png" alt="Crimtan" style="height:26px;width:auto;object-fit:contain;flex-shrink:0;">
     <div style="width:0.5px;height:20px;background:var(--g200);flex-shrink:0;"></div>
     <div class="tb-icon"><i class="ti ti-plane-tilt"></i></div>
-    <div class="tb-name">TravelID Japan — AI editor</div>
+    <div class="tb-name">CX Dashboard — AI editor</div>
     <div class="badge">Connected</div>
     <button class="icon-btn" id="undo-btn" title="Undo last change" disabled style="display:none"><i class="ti ti-arrow-back-up"></i></button>
     <button class="icon-btn" id="reset-btn" title="Reset to published version"><i class="ti ti-refresh"></i></button>
@@ -204,7 +204,7 @@
           <div class="msg assistant fi">
             <div class="av ai"><i class="ti ti-plane-tilt"></i></div>
             <div class="mi">
-              <div class="bub">Hi! I'm your AI editor for <strong>TravelID Japan</strong>. I can make any change you describe — text, data, new sections, API connections, styling. Just tell me what you want and I'll apply it instantly to the preview.</div>
+              <div class="bub">Hi! I'm your AI editor for <strong>CX Dashboard</strong>. I can make any change you describe — text, data, new sections, API connections, styling. Just tell me what you want and I'll apply it instantly to the preview.</div>
             </div>
           </div>
           <div class="msg assistant fi">
@@ -228,7 +228,7 @@
           </div>
         </div>
         <div id="inp">
-          <textarea id="txt" placeholder="Describe any change to TravelID Japan…" rows="1"></textarea>
+          <textarea id="txt" placeholder="Describe any change to CX Dashboard…" rows="1"></textarea>
           <button id="snd" aria-label="Send"><i class="ti ti-send-2"></i></button>
         </div>
       </div>
@@ -242,7 +242,7 @@
     <div id="preview-panel">
       <div id="preview-bar">
         <span class="plbl">Live preview</span>
-        <span class="purl">TravelID Japan · v30 · local</span>
+        <span class="purl">CX Dashboard · v30 · local</span>
         <button id="refresh-btn"><i class="ti ti-refresh" style="font-size:12px"></i> Refresh</button>
       </div>
       <div id="preview-wrap">
@@ -250,7 +250,7 @@
           <i class="ti ti-loader" style="font-size:22px;color:var(--g200);animation:spin .7s linear infinite;display:inline-block;"></i>
           <span>Loading preview…</span>
         </div>
-        <iframe id="preview-iframe" src="" title="TravelID Japan"></iframe>
+        <iframe id="preview-iframe" src="" title="CX Dashboard"></iframe>
       </div>
     </div>
 
@@ -259,7 +259,7 @@
 
 <script>
 // ── Constants ─────────────────────────────────────────────────────────────────
-const SYSTEM_PROMPT = `You are an expert web developer and AI agent editing a single-page HTML prototype: TravelID Japan (v30).
+const SYSTEM_PROMPT = `You are an expert web developer and AI agent editing a single-page HTML prototype: CX Dashboard (v30).
 
 IMPORTANT — This prototype uses INLINE STYLES everywhere, not CSS classes.
 
@@ -597,7 +597,7 @@ async function applyEdits(edits, commitMsg) {
     const res = await fetch("/prototype/edit", {
       method: "POST", headers: {"Content-Type":"application/json"},
       credentials: "same-origin",
-      body: JSON.stringify({ find: edit.find, replace: edit.replace, message: commitMsg || "Update via TravelID Editor" })
+      body: JSON.stringify({ find: edit.find, replace: edit.replace, message: commitMsg || "Update via CX Dashboard Editor" })
     });
     const data = await res.json();
     results.push({ ok: res.ok, error: data.error, find: edit.find });
