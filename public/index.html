@@ -420,7 +420,7 @@ function renderHistory() {
           <i class="ti ti-arrow-back-up" style="font-size:10px"></i> ${isLatest ? 'Undo' : 'Roll back here'}
         </button>
       </div>
-      <div class="h-item-desc">${item.desc}</div>`;
+      <div class="h-item-desc">${esc(item.desc)}</div>`;
     historyView.appendChild(el);
   });
 }

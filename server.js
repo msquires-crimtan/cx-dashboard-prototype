@@ -4,7 +4,7 @@ import crypto from "crypto";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import rateLimit from "express-rate-limit";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -16,6 +16,7 @@ app.use(express.json({ limit: "10mb" }));
 const PORT          = process.env.PORT          || 8080;
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || "";
 const APP_PASSWORD  = process.env.APP_PASSWORD  || "changeme";
+if (!process.env.APP_PASSWORD) console.error("🚨 SECURITY: APP_PASSWORD not set — running with insecure default. Set APP_PASSWORD before sharing this app.");
 const COOKIE_SECRET = process.env.COOKIE_SECRET || crypto.randomBytes(32).toString("hex");
 const IS_PROD       = process.env.NODE_ENV === "production" || !!process.env.RAILWAY_ENVIRONMENT;
 const COOKIE_NAME   = "cx_sess";
@@ -124,8 +125,8 @@ app.post("/auth/logout", (req, res) => {
 app.get("/auth/check", (req, res) => res.json({ authed: isAuthed(req) }));
 
 // ── Git helpers ───────────────────────────────────────────────────────────────
-function git(cmd) {
-  return execSync(cmd, { cwd: REPO_DIR, encoding: "utf-8", env: {
+function git(...args) {
+  return execFileSync("git", args, { cwd: REPO_DIR, encoding: "utf-8", env: {
     ...process.env,
     GIT_AUTHOR_NAME: "CX Dashboard",
     GIT_AUTHOR_EMAIL: "editor@crimtan.com",
@@ -146,7 +147,7 @@ async function ensureRepo() {
     console.log("Cloning repo…");
     fs.mkdirSync(REPO_DIR, { recursive: true });
     try {
-      execSync(`git clone ${repoUrl} ${REPO_DIR}`, {
+      execFileSync("git", ["clone", repoUrl, REPO_DIR], {
         encoding: "utf-8",
         env: {
           ...process.env,
@@ -171,10 +172,10 @@ async function ensureRepo() {
 }
 
 async function commitAndPush(message) {
-  git(`git add ${PROTOTYPE_FILE}`);
-  try { git(`git commit -m "${message.replace(/"/g, "'")}"`); } catch { return; }
+  git("add", PROTOTYPE_FILE);
+  try { git("commit", "-m", message); } catch { return; }
   const repoUrl = `https://${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git`;
-  git(`git push ${repoUrl} ${GITHUB_BRANCH}`);
+  git("push", repoUrl, GITHUB_BRANCH);
   console.log("Pushed:", message);
 }
 
@@ -236,8 +237,8 @@ app.post("/prototype/refresh", requireAuth, async (req, res) => {
   try {
     if (GITHUB_TOKEN && fs.existsSync(path.join(REPO_DIR, ".git"))) {
       const repoUrl = `https://${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git`;
-      git(`git fetch ${repoUrl} ${GITHUB_BRANCH}`);
-      git(`git checkout FETCH_HEAD -- ${PROTOTYPE_FILE}`);
+      git("fetch", repoUrl, GITHUB_BRANCH);
+      git("checkout", "FETCH_HEAD", "--", PROTOTYPE_FILE);
     }
     res.json({ ok: true });
   } catch (err) { res.status(502).json({ error: err.message }); }
@@ -256,12 +257,12 @@ app.post("/proxy/anthropic", requireAuth, apiLimit, async (req, res) => {
 });
 
 // ── CX Dashboard API routes ───────────────────────────────────────────────────
-const ALLOWED_TABLES = ["creatives", "edit_history", "overrides"];
-
 // GET /api/creatives — fetch all creatives (optionally filter by sheet)
 app.get("/api/creatives", requireAuth, async (req, res) => {
-  const query = new URLSearchParams(req.query).toString();
-  const { status, data } = await supabase("creatives", { query });
+  const allowed = ["sheet", "status", "market", "format", "order", "limit", "offset", "select"];
+  const params = {};
+  for (const k of allowed) { if (req.query[k] !== undefined) params[k] = req.query[k]; }
+  const { status, data } = await supabase("creatives", { query: new URLSearchParams(params).toString() });
   res.status(status).json(data);
 });
 
@@ -302,8 +303,9 @@ app.post("/api/edit_history", requireAuth, async (req, res) => {
 
 // GET /api/edit_history — fetch history (optionally filter by row_id)
 app.get("/api/edit_history", requireAuth, async (req, res) => {
-  const query = new URLSearchParams({ ...req.query, order: "edited_at.desc", limit: "100" }).toString();
-  const { status, data } = await supabase("edit_history", { query });
+  const params = { order: "edited_at.desc", limit: "100" };
+  if (req.query.row_id && /^[a-zA-Z0-9_-]+$/.test(req.query.row_id)) params["row_id"] = `eq.${req.query.row_id}`;
+  const { status, data } = await supabase("edit_history", { query: new URLSearchParams(params).toString() });
   res.status(status).json(data);
 });
 
