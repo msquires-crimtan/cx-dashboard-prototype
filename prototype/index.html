@@ -699,7 +699,11 @@ function populateSels() {
   const m = {status:'status', season:'season', market:'market', dest:'destination', lang:'language'};
   Object.entries(m).forEach(([id,key])=>{
     const s=document.getElementById('f-'+id), c=s.value;
-    s.innerHTML='<option value="">All '+id+'</option>'+uniq(key).map(v=>`<option${v===c?' selected':''}>${v}</option>`).join('');
+    let options = uniq(key);
+    // Filter out self-referential options
+    if (key === 'market') options = options.filter(v => v !== 'market');
+    if (key === 'language') options = options.filter(v => v !== 'language');
+    s.innerHTML='<option value="">All '+id+'</option>'+options.map(v=>`<option${v===c?' selected':''}>${v}</option>`).join('');
   });
   // cities — split multi-city strings into individual cities
   const citiesSel = document.getElementById('f-cities');
