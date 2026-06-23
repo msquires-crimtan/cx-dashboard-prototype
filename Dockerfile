@@ -20,4 +20,7 @@ COPY public/ ./public/
 ENV NODE_ENV=production
 EXPOSE 8080
 
+RUN chown -R 1000:1000 /app
+USER 1000
+
 CMD ["node", "server.js"]
