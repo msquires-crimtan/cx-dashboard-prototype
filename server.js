@@ -6,9 +6,11 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import { execFileSync } from "child_process";
 import rateLimit from "express-rate-limit";
+import helmet from "helmet";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+app.use(helmet());
 app.set("trust proxy", 1);
 app.use(express.json({ limit: "10mb" }));
 
