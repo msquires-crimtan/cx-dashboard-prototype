@@ -166,13 +166,18 @@
   </div>
   <div class="gate-card">
     <h1>CX Dashboard</h1>
-    <p class="gate-sub">AI content editor — authorised access only</p>
+    <p class="gate-sub" id="gate-sub">AI content editor — authorised access only</p>
+    <div>
+      <label for="email">Email</label>
+      <input type="email" id="email" placeholder="you@crimtan.com" autocomplete="username">
+    </div>
     <div>
       <label for="pw">Password</label>
       <input type="password" id="pw" placeholder="••••••••" autocomplete="current-password">
       <p class="err" id="pw-err">Incorrect password — please try again.</p>
     </div>
     <button class="btn-primary" id="login-btn">Sign in</button>
+    <button type="button" class="forgot-link" id="mode-toggle">New here? Create an account</button>
     <button type="button" class="forgot-link" id="forgot-link">Forgot password?</button>
     <p class="forgot-note" id="forgot-note">Password resets aren't self-service yet — email <a href="mailto:msquires@crimtan.com">msquires@crimtan.com</a> to request one.</p>
     <p class="notice">

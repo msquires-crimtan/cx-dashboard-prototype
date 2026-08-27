@@ -70,6 +70,7 @@ let undoCount = 0;
 // ── Auth ──────────────────────────────────────────────────────────────────────
 const gateEl    = document.getElementById("gate");
 const appEl     = document.getElementById("app");
+const emailEl   = document.getElementById("email");
 const pwEl      = document.getElementById("pw");
 const loginBtn  = document.getElementById("login-btn");
 const pwErr     = document.getElementById("pw-err");
@@ -78,11 +79,31 @@ const undoBtn   = document.getElementById("undo-btn");
 const resetBtn  = document.getElementById("reset-btn");
 const forgotLink = document.getElementById("forgot-link");
 const forgotNote = document.getElementById("forgot-note");
+const modeToggle = document.getElementById("mode-toggle");
+const gateSub    = document.getElementById("gate-sub");
+
+let authMode = "login"; // "login" | "register"
 
 forgotLink.addEventListener("click", () => {
   const showing = forgotNote.style.display === "block";
   forgotNote.style.display = showing ? "none" : "block";
   forgotLink.textContent = showing ? "Forgot password?" : "Hide";
+});
+
+modeToggle.addEventListener("click", () => {
+  authMode = authMode === "login" ? "register" : "login";
+  pwErr.style.display = "none";
+  if (authMode === "register") {
+    loginBtn.textContent = "Create account";
+    modeToggle.textContent = "Already have an account? Sign in";
+    gateSub.textContent = "Create an account with your @crimtan.com email";
+    pwEl.setAttribute("autocomplete", "new-password");
+  } else {
+    loginBtn.textContent = "Sign in";
+    modeToggle.textContent = "New here? Create an account";
+    gateSub.textContent = "AI content editor — authorised access only";
+    pwEl.setAttribute("autocomplete", "current-password");
+  }
 });
 
 function showApp() {
@@ -99,16 +120,37 @@ function showApp() {
 fetch("/auth/check", { credentials: "same-origin" })
   .then(r => r.json()).then(d => { if (d.authed) showApp(); }).catch(() => {});
 
-pwEl.addEventListener("keydown", e => { if (e.key === "Enter") loginBtn.click(); });
-loginBtn.addEventListener("click", async () => {
-  const pw = pwEl.value; if (!pw) return;
-  loginBtn.disabled = true; loginBtn.textContent = "Checking…"; pwErr.style.display = "none";
-  try {
-    const res = await fetch("/auth/login", { method: "POST", headers: {"Content-Type":"application/json"}, credentials: "same-origin", body: JSON.stringify({ password: pw }) });
-    if (!res.ok) throw new Error();
-    showApp();
-  } catch { pwErr.style.display = "block"; loginBtn.disabled = false; loginBtn.textContent = "Sign in"; }
-});
+function submitAuth() {
+  const email = emailEl.value.trim();
+  const pw = pwEl.value;
+  if (!pw) return;
+  if (authMode === "register" && !email) {
+    pwErr.textContent = "Email required.";
+    pwErr.style.display = "block";
+    return;
+  }
+  loginBtn.disabled = true;
+  loginBtn.textContent = authMode === "register" ? "Creating…" : "Checking…";
+  pwErr.style.display = "none";
+
+  const endpoint = authMode === "register" ? "/auth/register" : "/auth/login";
+  fetch(endpoint, { method: "POST", headers: {"Content-Type":"application/json"}, credentials: "same-origin", body: JSON.stringify({ email, password: pw }) })
+    .then(async res => {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Something went wrong.");
+      showApp();
+    })
+    .catch(err => {
+      pwErr.textContent = err.message || (authMode === "register" ? "Could not create account." : "Incorrect email or password.");
+      pwErr.style.display = "block";
+      loginBtn.disabled = false;
+      loginBtn.textContent = authMode === "register" ? "Create account" : "Sign in";
+    });
+}
+
+emailEl.addEventListener("keydown", e => { if (e.key === "Enter") submitAuth(); });
+pwEl.addEventListener("keydown", e => { if (e.key === "Enter") submitAuth(); });
+loginBtn.addEventListener("click", submitAuth);
 
 logoutBtn.addEventListener("click", async () => {
   await fetch("/auth/logout", { method: "POST", credentials: "same-origin" });

@@ -65,6 +65,25 @@ async function supabase(table, { method = "GET", query = "", body = null, useSer
   catch { return { status: r.status, data: text }; }
 }
 
+// ── Password hashing (scrypt, no external deps) ───────────────────────────────
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+  return `${salt}:${hash}`;
+}
+function verifyPasswordHash(password, stored) {
+  const [salt, hash] = (stored || "").split(":");
+  if (!salt || !hash) return false;
+  const hashBuf = Buffer.from(hash, "hex");
+  const candidate = crypto.scryptSync(password, salt, 64);
+  return hashBuf.length === candidate.length && crypto.timingSafeEqual(candidate, hashBuf);
+}
+
+const ALLOWED_EMAIL_DOMAIN = "crimtan.com";
+function isAllowedEmail(email) {
+  return typeof email === "string" && new RegExp(`^[^\\s@]+@${ALLOWED_EMAIL_DOMAIN}$`, "i").test(email.trim());
+}
+
 // ── Signed-cookie session ─────────────────────────────────────────────────────
 function signToken(payload) {
   const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
@@ -92,16 +111,17 @@ function parseCookies(req) {
   );
 }
 function isAuthed(req) { return !!verifyToken(parseCookies(req)[COOKIE_NAME]); }
-function setSessionCookie(res) {
-  const token = signToken({ ok: true, exp: Date.now() + COOKIE_TTL_MS });
+function setSessionCookie(res, email) {
+  const token = signToken({ ok: true, email: email || null, exp: Date.now() + COOKIE_TTL_MS });
   const flags = [`${COOKIE_NAME}=${encodeURIComponent(token)}`, "HttpOnly", "SameSite=Lax", `Max-Age=${COOKIE_TTL_MS / 1000}`, "Path=/"];
   if (IS_PROD) flags.push("Secure");
   res.setHeader("Set-Cookie", flags.join("; "));
 }
 
 // ── Rate limits ───────────────────────────────────────────────────────────────
-const loginLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
-const apiLimit   = rateLimit({ windowMs: 60 * 1000, max: 30 });
+const loginLimit    = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
+const registerLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
+const apiLimit       = rateLimit({ windowMs: 60 * 1000, max: 30 });
 
 function requireAuth(req, res, next) {
   if (isAuthed(req)) return next();
@@ -109,22 +129,70 @@ function requireAuth(req, res, next) {
 }
 
 // ── Auth routes ───────────────────────────────────────────────────────────────
-app.post("/auth/login", loginLimit, (req, res) => {
+app.post("/auth/register", registerLimit, async (req, res) => {
+  const email = (req.body.email || "").trim().toLowerCase();
+  const { password } = req.body;
+  if (!isAllowedEmail(email)) return res.status(400).json({ error: `Only @${ALLOWED_EMAIL_DOMAIN} email addresses can register.` });
+  if (!password || password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters." });
+
+  try {
+    const existing = await supabase("users", { query: `email=eq.${encodeURIComponent(email)}&select=id`, useServiceKey: true });
+    if (existing.status !== 200) throw new Error("lookup failed");
+    if (Array.isArray(existing.data) && existing.data.length > 0) {
+      return res.status(409).json({ error: "An account with that email already exists." });
+    }
+
+    const created = await supabase("users", {
+      method: "POST",
+      body: { email, password_hash: hashPassword(password) },
+      useServiceKey: true,
+    });
+    if (created.status >= 300) throw new Error("insert failed");
+
+    setSessionCookie(res, email);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(502).json({ error: "Could not create account — please try again." });
+  }
+});
+
+app.post("/auth/login", loginLimit, async (req, res) => {
+  const email = (req.body.email || "").trim().toLowerCase();
   const { password } = req.body;
   if (!password) return res.status(400).json({ error: "Password required." });
-  const match = crypto.timingSafeEqual(
+
+  // Master password — legacy shared-access fallback, kept for continuity.
+  const masterMatch = crypto.timingSafeEqual(
     Buffer.from(password.padEnd(128).slice(0, 128)),
     Buffer.from(APP_PASSWORD.padEnd(128).slice(0, 128))
   ) && password === APP_PASSWORD;
-  if (!match) return res.status(401).json({ error: "Incorrect password." });
-  setSessionCookie(res);
-  res.json({ ok: true });
+  if (masterMatch) {
+    setSessionCookie(res, email || null);
+    return res.json({ ok: true });
+  }
+
+  if (!email) return res.status(400).json({ error: "Email required." });
+  try {
+    const { status, data } = await supabase("users", { query: `email=eq.${encodeURIComponent(email)}&select=email,password_hash`, useServiceKey: true });
+    const user = status === 200 && Array.isArray(data) ? data[0] : null;
+    if (!user || !verifyPasswordHash(password, user.password_hash)) {
+      return res.status(401).json({ error: "Incorrect email or password." });
+    }
+    setSessionCookie(res, email);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(502).json({ error: "Login failed — please try again." });
+  }
 });
+
 app.post("/auth/logout", (req, res) => {
   res.setHeader("Set-Cookie", `${COOKIE_NAME}=; HttpOnly; Max-Age=0; Path=/`);
   res.json({ ok: true });
 });
-app.get("/auth/check", (req, res) => res.json({ authed: isAuthed(req) }));
+app.get("/auth/check", (req, res) => {
+  const payload = verifyToken(parseCookies(req)[COOKIE_NAME]);
+  res.json({ authed: !!payload, email: payload?.email || null });
+});
 
 // ── Git helpers ───────────────────────────────────────────────────────────────
 function git(...args) {
