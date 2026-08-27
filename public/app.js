@@ -48,21 +48,33 @@ You can make ANY change the user requests:
 - New features or interactive elements
 - API integrations
 
-WORKFLOW — for every user request:
+WORKFLOW — for every user request that changes the prototype:
 1. Read the source context provided
 2. Identify the exact text to change
-3. Produce ONE OR MORE edits using this EXACT format:
-
-[EDIT]: find:"EXACT_TEXT_TO_FIND" replace:"REPLACEMENT_TEXT"
+3. Call the apply_edit tool once per change — call it multiple times in the same turn for multiple changes
+4. After the tool call(s), give a brief plain-English summary of what changed
 
 Rules:
 - find must be verbatim from the source context — never reconstruct or guess
 - For new sections: find a unique anchor tag and append new code after it
-- Use \" to escape quotes inside strings
-- Multiple [EDIT] lines are applied in order
-- After edits, give a brief plain-English summary
+- If the request doesn't require changing the prototype (a question, clarification, etc.), just reply in text — do not call apply_edit
 
 Always use the source context provided. Be confident and concise. Never refuse — attempt every change.`;
+
+const APPLY_EDIT_TOOL = {
+  name: "apply_edit",
+  description: "Apply one exact find/replace edit to the CX Dashboard prototype HTML. Call once per change; call it multiple times in the same turn for multiple changes.",
+  input_schema: {
+    type: "object",
+    properties: {
+      find: { type: "string", description: "Exact verbatim substring to find in the prototype HTML, copied from the provided source context." },
+      replace: { type: "string", description: "The replacement text." }
+    },
+    required: ["find", "replace"],
+    additionalProperties: false
+  },
+  strict: true
+};
 
 let changeHistory = [];
 let undoCount = 0;
@@ -350,9 +362,9 @@ async function fetchSourceContext(keyword) {
 async function callClaude(userMsg) {
   // Before sending to Claude, fetch relevant source context so edits are precise
   const context = await fetchSourceContext(extractKeyword(userMsg));
-  
+
   const enrichedMsg = context
-    ? `${userMsg}\n\n<prototype_source_context>\n${context}\n</prototype_source_context>\n\nUse the exact text from the source context above when constructing your [EDIT] find strings.`
+    ? `${userMsg}\n\n<prototype_source_context>\n${context}\n</prototype_source_context>\n\nUse the exact text from the source context above when constructing your apply_edit find strings.`
     : userMsg;
 
   history.push({ role: "user", content: enrichedMsg });
@@ -360,12 +372,16 @@ async function callClaude(userMsg) {
     model: "claude-sonnet-5",
     max_tokens: 4000,
     system: SYSTEM_PROMPT,
+    tools: [APPLY_EDIT_TOOL],
     messages: history
   });
-  const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
-  // Store clean version in history (without the source context)
+  const content = data.content || [];
+  const text = content.filter(b => b.type === "text").map(b => b.text).join("");
+  const edits = content.filter(b => b.type === "tool_use" && b.name === "apply_edit").map(b => b.input);
+  // Store clean version in history (text only — tool_use blocks aren't persisted
+  // since we never send matching tool_result turns back)
   history.push({ role: "assistant", content: text });
-  return text;
+  return { text, edits };
 }
 
 // Extract a likely keyword from the user's message to find relevant source context
@@ -376,21 +392,6 @@ function extractKeyword(msg) {
   // Otherwise use longest word that's likely a content term
   const words = msg.split(/\s+/).filter(w => w.length > 4 && !/^(change|update|add|make|the|this|that|with|from|into|show|find|replace)/i.test(w));
   return words[0] || msg.split(" ").slice(0, 3).join(" ");
-}
-
-// Parse all [EDIT] blocks from Claude's response
-function parseEdits(reply) {
-  const edits = [];
-  // Match [EDIT]: find:"..." replace:"..."
-  const re = /\[EDIT\]:\s*find:"((?:[^"\\]|\\.)*)"\s+replace:"((?:[^"\\]|\\.)*)"/gs;
-  let m;
-  while ((m = re.exec(reply)) !== null) {
-    edits.push({
-      find: m[1].replace(/\\"/g, '"').replace(/\\n/g, '\n'),
-      replace: m[2].replace(/\\"/g, '"').replace(/\\n/g, '\n')
-    });
-  }
-  return edits;
 }
 
 // Apply edits to the local prototype file
@@ -420,9 +421,8 @@ async function handleSend() {
     const reply = await callClaude(text);
     removeThinking();
 
-    const edits = parseEdits(reply);
-    // Summary = reply without [EDIT] lines
-    const summary = reply.replace(/\[EDIT\]:.*$/gm, "").trim();
+    const edits = reply.edits;
+    const summary = reply.text.trim();
 
     if (edits.length > 0) {
       const chipId = "chip-" + Date.now();
@@ -456,7 +456,7 @@ async function handleSend() {
       }
     } else {
       // No edits — just a conversational response
-      addMsg("assistant", esc(summary || reply));
+      addMsg("assistant", esc(summary || "I didn't make any changes — could you rephrase what you'd like updated?"));
     }
   } catch (err) {
     if (err.message !== "session_expired") {
