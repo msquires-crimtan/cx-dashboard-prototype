@@ -235,7 +235,8 @@ thead th:not(.th-wide){white-space:nowrap}
 tbody tr{border-bottom:1px solid #2e002440;transition:background .08s}
 tbody tr:last-child{border-bottom:none}
 tbody tr:hover{background:#3d003530}
-tbody td{padding:6px 9px;color:var(--text2);vertical-align:middle}
+tbody td{padding:6px 9px;color:var(--text2);vertical-align:middle;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+tbody td:has(.dest-cell){overflow:visible;max-width:none}
 
 /* INLINE DROPDOWN (CP, Crimtan, Format) */
 .inrow-dd-select{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:4px 6px;font-size:11px;color:var(--text2);outline:none;cursor:pointer;font-family:'Epilogue',sans-serif;min-width:100px;max-width:140px;width:auto;transition:border-color .12s}
@@ -347,12 +348,13 @@ tbody td{padding:6px 9px;color:var(--text2);vertical-align:middle}
 
 /* DESTINATION dropdown-tag cell */
 .dest-cell{position:relative;display:inline-block}
-.dest-tag{display:inline-flex;align-items:center;gap:4px;background:#00B5B818;color:var(--teal);border:1px solid #00B5B838;border-radius:3px;padding:2px 7px;font-size:10px;font-weight:600;font-family:'DM Mono',monospace;cursor:pointer;transition:border-color .12s}
+.dest-tag{display:inline-flex;align-items:center;gap:4px;background:#00B5B818;color:var(--teal);border:1px solid #00B5B838;border-radius:3px;padding:2px 7px;font-size:10px;font-weight:600;font-family:'DM Mono',monospace;cursor:pointer;transition:border-color .12s;max-width:220px}
+.dest-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .dest-tag:hover{border-color:var(--teal);background:#00B5B830}
 .dest-tag .dest-arrow{font-size:8px;opacity:.6}
 .dest-dropdown{display:none;position:absolute;top:calc(100% + 4px);left:0;background:var(--bg2);border:1px solid var(--teal);border-radius:var(--rl);z-index:200;min-width:150px;max-height:220px;overflow-y:auto;box-shadow:0 6px 24px #00000060}
 .dest-dropdown.open{display:block}
-.dest-option{padding:7px 12px;font-size:12px;color:var(--text2);cursor:pointer;transition:background .1s;font-family:'Epilogue',sans-serif;white-space:nowrap}
+.dest-option{padding:7px 12px;font-size:12px;color:var(--text2);cursor:pointer;transition:background .1s;font-family:'Epilogue',sans-serif;white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis}
 .dest-option:hover{background:var(--bg3);color:var(--teal)}
 .dest-option.selected{color:var(--teal);font-weight:700}
 
@@ -1396,7 +1398,7 @@ function render() {
 
     const destCell = `<div class="dest-cell">
       <div class="dest-tag" onclick="toggleDestDropdown('${safeId}');event.stopPropagation()">
-        ${destVal||'—'}<span class="dest-arrow">▾</span>
+        <span class="dest-label">${destVal||'—'}</span><span class="dest-arrow">▾</span>
       </div>
       <div class="dest-dropdown" id="dest-dd-${r._rowId}">
         ${allDests.map(d=>`<div class="dest-option${d===destVal?' selected':''}" onclick="selectDest('${safeId}','${d.replace(/'/g,"\\'")}','${safeSheet}','${safeInfo}')">${d}</div>`).join('')}
