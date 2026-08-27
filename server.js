@@ -262,6 +262,12 @@ app.get("/prototype", requireAuth, async (req, res) => {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
   res.setHeader("Cache-Control", "no-store");
+  // The prototype document is AI-edited HTML that relies on inline <script>
+  // and onclick handlers throughout (row expand, copy, theme toggle, etc.).
+  // It's only ever loaded inside this authenticated, same-origin iframe, so
+  // drop the app-wide CSP for just this response instead of rewriting
+  // hundreds of handlers in AI-editable markup.
+  res.removeHeader("Content-Security-Policy");
   res.send(fs.readFileSync(PROTO_PATH, "utf-8"));
 });
 

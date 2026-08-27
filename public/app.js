@@ -329,7 +329,11 @@ function removeThinking() { document.getElementById("thinking")?.remove(); }
 async function proxyPost(ep, body) {
   const res = await fetch(ep, { method: "POST", headers: {"Content-Type":"application/json"}, credentials: "same-origin", body: JSON.stringify(body) });
   if (res.status === 401) { location.reload(); throw new Error("session_expired"); }
-  return res.json();
+  const data = await res.json();
+  if (!res.ok || data.type === "error") {
+    throw new Error(data?.error?.message || `Request failed (${res.status}).`);
+  }
+  return data;
 }
 
 // Fetch targeted excerpts from the prototype around a keyword
@@ -353,7 +357,7 @@ async function callClaude(userMsg) {
 
   history.push({ role: "user", content: enrichedMsg });
   const data = await proxyPost("/proxy/anthropic", {
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-5",
     max_tokens: 4000,
     system: SYSTEM_PROMPT,
     messages: history
@@ -457,7 +461,7 @@ async function handleSend() {
   } catch (err) {
     if (err.message !== "session_expired") {
       removeThinking();
-      addMsg("assistant", "Something went wrong — please try again.", [{ type: "error", icon: "alert-circle", label: "Error" }]);
+      addMsg("assistant", `Something went wrong: ${esc(err.message || "please try again.")}`, [{ type: "error", icon: "alert-circle", label: "Error" }]);
     }
   }
 
