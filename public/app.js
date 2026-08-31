@@ -56,6 +56,7 @@ WORKFLOW — for every user request that changes the prototype:
 
 Rules:
 - find must be verbatim from the source context — never reconstruct or guess
+- find must uniquely identify ONE location — this file has hundreds of near-identical repeated rows/blocks, so a short or generic find string can silently match more than one place. Include enough surrounding context (a nearby id, row value, or neighbouring tag) to make it unique. The edit is rejected if find matches more than once.
 - For new sections: find a unique anchor tag and append new code after it
 - If the request doesn't require changing the prototype (a question, clarification, etc.), just reply in text — do not call apply_edit
 
@@ -449,7 +450,7 @@ async function handleSend() {
         changeHistory.push({ time: now(), desc: summary || text });
         renderHistory();
       } else {
-        const msg = failed.map(f => `Could not find: <code>${esc(f.find.substring(0, 60))}…</code>`).join("<br>");
+        const msg = failed.map(f => `${esc(f.error || "Edit failed")}: <code>${esc(f.find.substring(0, 60))}…</code>`).join("<br>");
         if (chip) { chip.className = "chip error"; chip.innerHTML = `<i class="ti ti-alert-circle" style="font-size:11px"></i>${failed.length} edit${failed.length > 1 ? "s" : ""} failed`; }
         addMsg("assistant", `Some edits couldn't be applied — the text wasn't found in the prototype:<br>${msg}<br><br>Try rephrasing or being more specific about what to change.`, null, true);
         if (succeeded.length > 0) { loadPreview(true); setTimeout(flashPreview, 600); }

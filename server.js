@@ -250,7 +250,14 @@ async function commitAndPush(message) {
 }
 
 // ── Undo stack ────────────────────────────────────────────────────────────────
-const undoStack = [];
+// Keyed per session (not global) — otherwise one user's Undo could revert
+// another user's most recent edit when multiple people edit concurrently.
+const undoStacks = new Map(); // sessionCookie -> string[]
+function getUndoStack(req) {
+  const key = parseCookies(req)[COOKIE_NAME] || "anon";
+  if (!undoStacks.has(key)) undoStacks.set(key, []);
+  return undoStacks.get(key);
+}
 
 // ── Prototype routes ──────────────────────────────────────────────────────────
 app.get("/prototype/ready", requireAuth, (req, res) => {
@@ -293,7 +300,10 @@ app.post("/prototype/edit", requireAuth, async (req, res) => {
   if (!find || replace === undefined) return res.status(400).json({ error: "find and replace required" });
   await ensureRepo();
   let html = fs.readFileSync(PROTO_PATH, "utf-8");
-  if (!html.includes(find)) return res.status(404).json({ error: "Text not found", find: find.substring(0, 100) });
+  const occurrences = html.split(find).length - 1;
+  if (occurrences === 0) return res.status(404).json({ error: "Text not found", find: find.substring(0, 100) });
+  if (occurrences > 1) return res.status(409).json({ error: `This text appears ${occurrences} times in the file — include more surrounding context so the edit only targets one spot.`, find: find.substring(0, 100) });
+  const undoStack = getUndoStack(req);
   undoStack.push(html); if (undoStack.length > 20) undoStack.shift();
   html = html.split(find).join(replace);
   fs.writeFileSync(PROTO_PATH, html, "utf-8");
@@ -302,6 +312,7 @@ app.post("/prototype/edit", requireAuth, async (req, res) => {
 });
 
 app.post("/prototype/undo", requireAuth, async (req, res) => {
+  const undoStack = getUndoStack(req);
   if (undoStack.length === 0) return res.status(400).json({ error: "Nothing to undo" });
   const prev = undoStack.pop();
   fs.writeFileSync(PROTO_PATH, prev, "utf-8");
