@@ -485,6 +485,7 @@ tbody tr:hover .copy-row-btn{opacity:1}
       <select id="f-dest" onchange="render()"><option value="">All destinations</option></select>
       <select id="f-cities" onchange="render()"><option value="">All cities</option></select>
       <select id="f-lang" onchange="render()"><option value="">All languages</option></select>
+      <select id="frame-selector" title="Frame to duplicate when copying a row"></select>
       <button class="btn-rst-bar" onclick="resetFilters()">↺ Reset</button>
     </div>
     <!-- COLUMN PICKER -->
@@ -1294,6 +1295,7 @@ let activeSheetTh = 'All'; // used in thead template
 
 function render() {
   populateSels();
+  updateFrameDropdown();
   activeSheetTh = activeSheet;
   let data = filteredData();
   if (sortK) data = [...data].sort((a,b)=>String(a[sortK]).localeCompare(String(b[sortK]))*sortD);
