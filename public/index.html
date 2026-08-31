@@ -17,6 +17,8 @@
     --b50:#E6F1FB;--b100:#B5D4F4;--b600:#185FA5;
     --sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
     --rad:10px;--rad-sm:6px;--pill:999px;
+    --crimson-grad:linear-gradient(135deg,#8a0022 0%,#4a0016 100%);
+    --tangerine-grad:linear-gradient(135deg,#FF5A1A 0%,#C8391A 100%);
   }
   html,body{height:100%;font-family:var(--sans);background:var(--g50);color:var(--g900);-webkit-font-smoothing:antialiased;overflow:hidden;}
 
@@ -83,7 +85,7 @@
   #app.on{display:flex;}
 
   /* Topbar */
-  #topbar{height:58px;flex-shrink:0;background:var(--g50);border-bottom:0.5px solid var(--g200);display:flex;align-items:center;gap:12px;padding:0 18px;}
+  #topbar{height:58px;flex-shrink:0;background:var(--g100);border-bottom:0.5px solid var(--g200);display:flex;align-items:center;gap:12px;padding:0 18px;}
   .tb-icon{width:26px;height:26px;border-radius:var(--rad-sm);background:var(--t50);display:flex;align-items:center;justify-content:center;color:var(--t600);font-size:13px;flex-shrink:0;}
   .tb-name{font-size:13px;font-weight:500;flex:1;}
   .badge{display:flex;align-items:center;gap:5px;font-size:11px;padding:3px 8px;border-radius:var(--pill);background:var(--t50);color:var(--t600);border:0.5px solid var(--t100);}
@@ -96,7 +98,7 @@
   #split{flex:1;display:flex;min-height:0;}
 
   /* Chat panel */
-  #chat-panel{width:380px;flex-shrink:0;display:flex;flex-direction:column;border-right:0.5px solid var(--g200);background:#fff;}
+  #chat-panel{width:380px;flex-shrink:0;display:flex;flex-direction:column;border-right:0.5px solid var(--g200);background:var(--g100);}
 
   /* Tab bar */
   #tabs{display:flex;border-bottom:0.5px solid var(--g100);flex-shrink:0;}
@@ -111,15 +113,16 @@
   .msg{display:flex;gap:9px;align-items:flex-start;}
   .msg.user{flex-direction:row-reverse;}
   .av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;flex-shrink:0;margin-top:2px;}
-  .av.ai{background:var(--t50);color:var(--t600);border:0.5px solid var(--t100);}
-  .av.user{background:var(--t600);color:var(--t50);}
+  .av.ai{background:var(--crimson-grad);color:#fff;border:none;}
+  .av.user{background:var(--tangerine-grad);color:#fff;}
   .mi{display:flex;flex-direction:column;max-width:86%;}
   .msg-sender{font-size:10.5px;font-weight:600;color:var(--g400);margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em;}
   .msg.user .msg-sender{text-align:right;}
   .bub{padding:9px 12px;font-size:13px;line-height:1.6;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,0.03);}
-  .msg.assistant .bub{background:var(--g50);color:var(--g900);border:0.5px solid var(--g100);border-top-left-radius:3px;}
-  .msg.user .bub{background:var(--t600);color:var(--t50);border-top-right-radius:3px;}
+  .msg.assistant .bub{background:var(--crimson-grad);color:#fff;border:none;border-top-left-radius:3px;}
+  .msg.user .bub{background:var(--tangerine-grad);color:#fff;border-top-right-radius:3px;}
   .bub code{font-family:var(--mono);font-size:11px;background:rgba(0,0,0,0.07);padding:1px 4px;border-radius:3px;}
+  .msg.assistant .bub code,.msg.user .bub code{background:rgba(255,255,255,0.18);color:#fff;}
   .chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 8px;border-radius:var(--pill);margin-top:4px;align-self:flex-start;transition:background .15s,color .15s,border-color .15s;}
   .chip.working{background:var(--a50);color:var(--a600);border:0.5px solid var(--a100);}
   .chip.done{background:var(--t50);color:var(--t600);border:0.5px solid var(--t100);}
@@ -137,10 +140,9 @@
   #txt{flex:1;resize:none;border:0.5px solid var(--g200);border-radius:var(--rad-sm);padding:8px 10px;font-size:13px;font-family:var(--sans);color:var(--g900);background:var(--g50);min-height:34px;max-height:120px;line-height:1.5;outline:none;transition:border-color .15s,background .15s;}
   #txt:focus{border-color:var(--t200);background:#fff;}
   #txt::placeholder{color:var(--g400);}
-  #snd{width:34px;height:34px;border-radius:var(--rad-sm);border:0.5px solid var(--g200);background:#fff;color:var(--g900);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;transition:background .15s,border-color .15s,color .15s;}
-  #snd:hover{background:var(--t600);border-color:var(--t600);color:#fff;}
-  #snd:disabled{opacity:.35;cursor:not-allowed;}
-  #snd:disabled:hover{background:#fff;border-color:var(--g200);color:var(--g900);}
+  #snd{width:34px;height:34px;border-radius:var(--rad-sm);border:none;background:var(--crimson-grad);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;box-shadow:0 2px 8px rgba(122,0,32,0.25);transition:box-shadow .15s,transform .15s;}
+  #snd:hover{box-shadow:0 4px 14px rgba(122,0,32,0.4);transform:translateY(-0.5px);}
+  #snd:disabled{opacity:.35;cursor:not-allowed;box-shadow:none;transform:none;}
 
   /* History view */
   #history-view{display:none;flex:1;overflow-y:auto;padding:12px;}
@@ -246,14 +248,14 @@
       <div id="chat-view">
         <div id="msgs">
           <div class="msg assistant fi" id="intro-msg-1">
-            <div class="av ai"><i class="ti ti-plane-tilt"></i></div>
+            <div class="av ai"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#fff" stroke-width="1.5"/><circle cx="12" cy="12" r="3" fill="#fff"/><line x1="12" y1="2" x2="12" y2="6" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="18" x2="12" y2="22" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="12" x2="6" y2="12" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><line x1="18" y1="12" x2="22" y2="12" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg></div>
             <div class="mi">
               <div class="msg-sender">Compass AI</div>
               <div class="bub">I'm Compass AI.</div>
             </div>
           </div>
           <div class="msg assistant fi" id="intro-msg-2">
-            <div class="av ai"><i class="ti ti-bulb"></i></div>
+            <div class="av ai"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#fff" stroke-width="1.5"/><circle cx="12" cy="12" r="3" fill="#fff"/><line x1="12" y1="2" x2="12" y2="6" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="18" x2="12" y2="22" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="12" x2="6" y2="12" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><line x1="18" y1="12" x2="22" y2="12" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg></div>
             <div class="mi">
               <div class="bub" style="background:var(--b50);border-color:var(--b100);color:var(--b600);">
                 <strong>Try asking:</strong><br>

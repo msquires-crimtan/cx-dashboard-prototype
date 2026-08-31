@@ -88,6 +88,15 @@ function senderName(email) {
   return local.replace(/\b\w/g, c => c.toUpperCase());
 }
 
+function initials(name) {
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+const COMPASS_ICON_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#fff" stroke-width="1.5"/><circle cx="12" cy="12" r="3" fill="#fff"/><line x1="12" y1="2" x2="12" y2="6" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="18" x2="12" y2="22" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="12" x2="6" y2="12" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><line x1="18" y1="12" x2="22" y2="12" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>';
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 const gateEl    = document.getElementById("gate");
 const appEl     = document.getElementById("app");
@@ -382,7 +391,9 @@ function addMsg(role, html, chips, system = false, sender = null) {
   wrap.className = `msg ${system ? "assistant" : role} fi`;
   const av = document.createElement("div");
   av.className = `av ${role === "user" ? "user" : "ai"}`;
-  av.innerHTML = system ? '<i class="ti ti-info-circle"></i>' : (role === "user" ? '<i class="ti ti-user"></i>' : '<i class="ti ti-plane-tilt"></i>');
+  if (system) av.innerHTML = '<i class="ti ti-info-circle"></i>';
+  else if (role === "user") av.textContent = initials(sender);
+  else av.innerHTML = COMPASS_ICON_SVG;
   const mi = document.createElement("div"); mi.className = "mi";
   if (sender) {
     const senderEl = document.createElement("div");
@@ -406,7 +417,7 @@ function addMsg(role, html, chips, system = false, sender = null) {
 
 function addThinking(label) {
   const wrap = document.createElement("div"); wrap.id = "thinking"; wrap.className = "msg assistant fi";
-  const av = document.createElement("div"); av.className = "av ai"; av.innerHTML = '<i class="ti ti-plane-tilt"></i>';
+  const av = document.createElement("div"); av.className = "av ai"; av.innerHTML = COMPASS_ICON_SVG;
   const bub = document.createElement("div"); bub.className = "bub";
   bub.style.background = "var(--g50)"; bub.style.border = "0.5px solid var(--g100)";
   bub.innerHTML = `<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--g600)">
