@@ -303,18 +303,42 @@ async function loadInitialChat() {
         : { type: "done", icon: "circle-check", label: `${turn.edit_count} change${turn.edit_count > 1 ? "s" : ""} applied` });
     }
     const assistantMi = addMsg("assistant", esc(turn.assistant_summary || ""), chips, false, "Compass AI");
-    if (turn.edit_count > 0 && !turn.rolled_back) addRevertLink(assistantMi, turn.id);
+    addMsgActions(assistantMi, { text: turn.assistant_summary, turnId: turn.edit_count > 0 && !turn.rolled_back ? turn.id : null });
   });
 }
 
-function addRevertLink(mi, turnId) {
-  mi.dataset.turnId = turnId;
-  const btn = document.createElement("button");
-  btn.className = "revert-link";
-  btn.title = "Revert this change";
-  btn.innerHTML = '<i class="ti ti-arrow-back-up"></i>';
-  btn.addEventListener("click", () => rollbackTurn(turnId, btn));
-  mi.appendChild(btn);
+// Icon-row under a Compass AI message (copy always; revert only when this
+// turn actually changed something and hasn't already been rolled back) —
+// mirrors the compact per-message action row in Lovable's chat.
+function addMsgActions(mi, { text, turnId } = {}) {
+  const row = document.createElement("div");
+  row.className = "msg-actions";
+
+  if (text) {
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "copy-link";
+    copyBtn.title = "Copy message";
+    copyBtn.innerHTML = '<i class="ti ti-copy"></i>';
+    copyBtn.addEventListener("click", () => {
+      navigator.clipboard.writeText(text).then(() => {
+        copyBtn.innerHTML = '<i class="ti ti-check"></i>';
+        setTimeout(() => { copyBtn.innerHTML = '<i class="ti ti-copy"></i>'; }, 1200);
+      });
+    });
+    row.appendChild(copyBtn);
+  }
+
+  if (turnId) {
+    mi.dataset.turnId = turnId;
+    const revertBtn = document.createElement("button");
+    revertBtn.className = "revert-link";
+    revertBtn.title = "Revert this change";
+    revertBtn.innerHTML = '<i class="ti ti-arrow-back-up"></i>';
+    revertBtn.addEventListener("click", () => rollbackTurn(turnId, revertBtn));
+    row.appendChild(revertBtn);
+  }
+
+  mi.appendChild(row);
 }
 
 async function rollbackTurn(turnId, btnEl) {
@@ -537,7 +561,7 @@ async function handleSend() {
           if (chip) { chip.className = "chip done"; chip.innerHTML = `<i class="ti ti-circle-check" style="font-size:11px"></i>${edits.length} change${edits.length > 1 ? "s" : ""} applied`; }
         }, 600);
 
-        if (turnId) addRevertLink(assistantMi, turnId);
+        addMsgActions(assistantMi, { text: summary, turnId });
         await refreshSharedLog();
       } else {
         const msg = failed.map(f => `${esc(f.error || "Edit failed")}: <code>${esc(f.find.substring(0, 60))}…</code>`).join("<br>");
@@ -545,13 +569,15 @@ async function handleSend() {
         addMsg("assistant", `Some edits couldn't be applied:<br>${msg}<br><br>Try rephrasing or being more specific about what to change.`, null, true);
         if (succeeded.length > 0) {
           loadPreview(true); setTimeout(flashPreview, 600);
-          if (turnId) addRevertLink(assistantMi, turnId);
+          addMsgActions(assistantMi, { text: summary, turnId });
           await refreshSharedLog();
         }
       }
     } else {
       // No edits — just a conversational response
-      addMsg("assistant", esc(summary || "I didn't make any changes — could you rephrase what you'd like updated?"), null, false, "Compass AI");
+      const summaryText = summary || "I didn't make any changes — could you rephrase what you'd like updated?";
+      const assistantMi = addMsg("assistant", esc(summaryText), null, false, "Compass AI");
+      addMsgActions(assistantMi, { text: summaryText });
     }
   } catch (err) {
     if (err.message !== "session_expired") {
@@ -601,6 +627,32 @@ const fullscreenBtn = document.getElementById("fullscreen-btn");
 fullscreenBtn.addEventListener("click", () => {
   const isFullscreen = appEl.classList.toggle("preview-fullscreen");
   fullscreenBtn.innerHTML = isFullscreen
-    ? '<i class="ti ti-arrows-minimize" style="font-size:12px"></i> Exit full screen'
-    : '<i class="ti ti-arrows-maximize" style="font-size:12px"></i> Full screen';
+    ? '<i class="ti ti-arrows-minimize" style="font-size:12px"></i> <span class="pbar-label">Exit full screen</span>'
+    : '<i class="ti ti-arrows-maximize" style="font-size:12px"></i> <span class="pbar-label">Full screen</span>';
+});
+
+// ── Device preview toggle (Desktop / Tablet / Mobile) ─────────────────────────
+// Simulates viewport widths for the prototype iframe only — independent of the
+// editor's own (separately responsive) layout.
+const deviceBtns = document.querySelectorAll(".device-btn");
+deviceBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    deviceBtns.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    previewWrap.classList.remove("device-tablet", "device-mobile");
+    if (btn.dataset.device === "tablet") previewWrap.classList.add("device-tablet");
+    else if (btn.dataset.device === "mobile") previewWrap.classList.add("device-mobile");
+  });
+});
+
+// ── Mobile Chat/Preview toggle ─────────────────────────────────────────────────
+// Below the tablet breakpoint, chat and preview stack and only one shows at a
+// time (CSS handles the actual show/hide via #split.mobile-show-preview).
+const splitEl = document.getElementById("split");
+document.querySelectorAll(".mp-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".mp-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    splitEl.classList.toggle("mobile-show-preview", btn.dataset.panel === "preview");
+  });
 });

@@ -88,7 +88,7 @@
   /* Topbar */
   #topbar{height:58px;flex-shrink:0;background:var(--dark-grey);border-bottom:0.5px solid var(--g200);display:flex;align-items:center;gap:12px;padding:0 18px;}
   .tb-icon{width:26px;height:26px;border-radius:var(--rad-sm);background:var(--t50);display:flex;align-items:center;justify-content:center;color:var(--t600);font-size:13px;flex-shrink:0;}
-  .tb-name{font-size:13px;font-weight:500;flex:1;color:#fff;}
+  .tb-name{font-size:13px;font-weight:500;flex:1;color:#fff;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
   .badge{display:flex;align-items:center;gap:5px;font-size:11px;padding:3px 8px;border-radius:var(--pill);background:var(--t50);color:var(--t600);border:0.5px solid var(--t100);}
   .badge::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--t200);}
   .icon-btn{width:28px;height:28px;border-radius:var(--rad-sm);border:none;background:none;color:rgba(255,255,255,0.65);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:color .15s,background .15s;}
@@ -129,7 +129,8 @@
   .chip.done{background:var(--t50);color:var(--t600);border:0.5px solid var(--t100);}
   .chip.error{background:var(--r50);color:var(--r600);border:0.5px solid var(--r100);}
   .chip.info{background:var(--b50);color:var(--b600);border:0.5px solid var(--b100);}
-  .revert-link{background:none;border:none;color:var(--g400);cursor:pointer;font-family:var(--sans);margin-top:5px;align-self:flex-start;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border-radius:var(--rad-sm);font-size:12px;transition:color .15s,background .15s;}
+  .revert-link,.copy-link{background:none;border:none;color:var(--g400);cursor:pointer;font-family:var(--sans);display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border-radius:var(--rad-sm);font-size:12px;transition:color .15s,background .15s;}
+  .copy-link:hover{color:var(--t600);background:var(--t50);}
   .revert-link:hover{color:var(--r600);background:var(--r50);}
   .revert-link:disabled{opacity:.4;cursor:default;color:var(--g400)!important;background:none!important;}
   .think{display:flex;gap:4px;align-items:center;padding:9px 11px;}
@@ -137,13 +138,15 @@
   .dot:nth-child(2){animation-delay:.2s;}
   .dot:nth-child(3){animation-delay:.4s;}
   @keyframes pulse{0%,80%,100%{opacity:.2;transform:scale(.8);}40%{opacity:1;transform:scale(1);}}
-  #inp{padding:10px 11px;border-top:0.5px solid rgba(255,255,255,0.1);display:flex;gap:7px;align-items:flex-end;flex-shrink:0;}
-  #txt{flex:1;resize:none;border:0.5px solid var(--g200);border-radius:var(--rad-sm);padding:8px 10px;font-size:13px;font-family:var(--sans);color:var(--g900);background:var(--g50);min-height:34px;max-height:120px;line-height:1.5;outline:none;transition:border-color .15s,background .15s;}
-  #txt:focus{border-color:var(--t200);background:#fff;}
+  #inp{padding:10px 11px;border-top:0.5px solid rgba(255,255,255,0.1);flex-shrink:0;}
+  #composer{display:flex;gap:6px;align-items:flex-end;background:var(--g50);border:0.5px solid var(--g200);border-radius:18px;padding:8px 8px 8px 14px;transition:border-color .15s,background .15s;}
+  #composer:focus-within{border-color:var(--t200);background:#fff;}
+  #txt{flex:1;resize:none;border:none;background:none;padding:4px 0;font-size:13px;font-family:var(--sans);color:var(--g900);min-height:24px;max-height:120px;line-height:1.5;outline:none;}
   #txt::placeholder{color:var(--g400);}
-  #snd{width:34px;height:34px;border-radius:var(--rad-sm);border:none;background:var(--crimson-grad);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;box-shadow:0 2px 8px rgba(122,0,32,0.25);transition:box-shadow .15s,transform .15s;}
+  #snd{width:32px;height:32px;border-radius:50%;border:none;background:var(--crimson-grad);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;box-shadow:0 2px 8px rgba(122,0,32,0.25);transition:box-shadow .15s,transform .15s;}
   #snd:hover{box-shadow:0 4px 14px rgba(122,0,32,0.4);transform:translateY(-0.5px);}
   #snd:disabled{opacity:.35;cursor:not-allowed;box-shadow:none;transform:none;}
+  .msg-actions{display:flex;gap:2px;margin-top:5px;align-self:flex-start;}
 
   /* History view */
   #history-view{display:none;flex:1;overflow-y:auto;padding:12px;}
@@ -178,19 +181,53 @@
   #preview-panel{flex:1;display:flex;flex-direction:column;background:var(--g100);min-width:0;}
   #preview-bar{height:40px;flex-shrink:0;background:var(--dark-grey);border-bottom:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:10px;padding:0 14px;}
   .plbl{font-size:11px;font-weight:500;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;}
-  .purl{font-size:11px;color:rgba(255,255,255,0.75);flex:1;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .purl{font-size:11px;color:rgba(255,255,255,0.75);flex:1;min-width:0;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .device-toggle{display:flex;gap:2px;background:rgba(255,255,255,0.08);border-radius:var(--rad-sm);padding:2px;flex-shrink:0;}
+  .device-btn{width:26px;height:24px;display:flex;align-items:center;justify-content:center;border:none;background:none;color:rgba(255,255,255,0.5);border-radius:4px;cursor:pointer;font-size:13px;transition:background .15s,color .15s;}
+  .device-btn:hover{color:#fff;}
+  .device-btn.active{background:var(--crimson-grad);color:#fff;}
   .pbar-btn{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:500;color:#fff;background:var(--crimson-grad);border:none;cursor:pointer;font-family:var(--sans);padding:5px 10px;border-radius:var(--rad-sm);box-shadow:0 1px 4px rgba(122,0,32,0.3);transition:box-shadow .15s,transform .15s;white-space:nowrap;}
   .pbar-btn:hover{box-shadow:0 3px 10px rgba(122,0,32,0.45);transform:translateY(-0.5px);}
   .spinning i{animation:spin .7s linear infinite;display:inline-block;}
   @keyframes spin{to{transform:rotate(360deg);}}
-  #preview-wrap{flex:1;position:relative;}
+  #preview-wrap{flex:1;position:relative;display:flex;align-items:stretch;justify-content:center;overflow:auto;background:var(--g200);}
   #preview-status{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;color:var(--g400);text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;}
-  #preview-iframe{width:100%;height:100%;border:none;display:block;opacity:0;transition:opacity .3s;}
+  #preview-iframe{width:100%;height:100%;border:none;display:block;opacity:0;transition:opacity .3s,width .25s;flex-shrink:0;background:#fff;}
   #preview-iframe.loaded{opacity:1;}
+  #preview-wrap.device-tablet #preview-iframe{width:768px!important;max-width:100%;box-shadow:0 0 0 1px var(--g200),0 12px 40px rgba(0,0,0,0.18);}
+  #preview-wrap.device-mobile #preview-iframe{width:390px!important;max-width:100%;box-shadow:0 0 0 1px var(--g200),0 12px 40px rgba(0,0,0,0.18);}
   #preview-wrap.flash::after{content:'';position:absolute;inset:0;background:var(--t200);opacity:0;animation:flashIn .4s ease forwards;pointer-events:none;}
   @keyframes flashIn{0%{opacity:.25;}100%{opacity:0;}}
   @keyframes fi{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
   .fi{animation:fi .2s ease forwards;}
+
+  /* ── Responsive ─────────────────────────────────────────────────────────── */
+  #mobile-panel-toggle{display:none;background:var(--dark-grey);padding:6px 10px;gap:6px;border-bottom:0.5px solid rgba(255,255,255,0.1);flex-shrink:0;}
+  .mp-btn{flex:1;padding:7px;font-size:12px;font-weight:600;color:rgba(255,255,255,0.5);background:none;border:none;border-radius:var(--rad-sm);cursor:pointer;font-family:var(--sans);transition:background .15s,color .15s;}
+  .mp-btn.active{background:var(--crimson-grad);color:#fff;}
+
+  /* Tablet: narrower chat panel, everything else unchanged */
+  @media (max-width:1024px){
+    #chat-panel{width:300px;}
+  }
+
+  /* Mobile: stack chat/preview, show one at a time via the toggle above */
+  @media (max-width:768px){
+    #topbar{padding:0 12px;gap:8px;}
+    .tb-name{display:none;}
+    #logout-btn span{display:none;}
+    #logout-btn{width:28px;padding:0;gap:0;}
+    #mobile-panel-toggle{display:flex;}
+    #split{flex-direction:column;}
+    #chat-panel{width:100%;flex:1;min-height:0;}
+    #preview-panel{flex:1;min-height:0;}
+    #split:not(.mobile-show-preview) #preview-panel{display:none;}
+    #split.mobile-show-preview #chat-panel{display:none;}
+    #app.preview-fullscreen #mobile-panel-toggle{display:none;}
+    .plbl{display:none;}
+    .pbar-label{display:none;}
+    .pbar-btn{padding:6px 8px;}
+  }
 </style>
 </head>
 <body>
@@ -237,6 +274,10 @@
     <button class="icon-btn" id="reset-btn" title="Reset to published version"><i class="ti ti-refresh"></i></button>
     <button class="icon-btn" id="logout-btn" title="Sign out" style="width:auto;gap:5px;padding:0 9px;"><i class="ti ti-logout"></i><span style="font-size:12px;font-weight:500;">Sign out</span></button>
   </div>
+  <div id="mobile-panel-toggle">
+    <button class="mp-btn active" data-panel="chat">Chat</button>
+    <button class="mp-btn" data-panel="preview">Preview</button>
+  </div>
   <div id="split">
 
     <!-- Chat panel -->
@@ -276,8 +317,10 @@
           </div>
         </div>
         <div id="inp">
-          <textarea id="txt" placeholder="Describe any change to CX Dashboard…" rows="1"></textarea>
-          <button id="snd" aria-label="Send"><i class="ti ti-send-2"></i></button>
+          <div id="composer">
+            <textarea id="txt" placeholder="Describe any change to CX Dashboard…" rows="1"></textarea>
+            <button id="snd" aria-label="Send"><i class="ti ti-arrow-up"></i></button>
+          </div>
         </div>
       </div>
 
@@ -291,9 +334,14 @@
       <div id="preview-bar">
         <span class="plbl">Live preview</span>
         <span class="purl">CX Dashboard · v30 · local</span>
-        <button class="pbar-btn" id="code-btn"><i class="ti ti-code" style="font-size:12px"></i> View code</button>
-        <button class="pbar-btn" id="fullscreen-btn"><i class="ti ti-arrows-maximize" style="font-size:12px"></i> Full screen</button>
-        <button class="pbar-btn" id="refresh-btn"><i class="ti ti-refresh" style="font-size:12px"></i> Refresh</button>
+        <div class="device-toggle">
+          <button class="device-btn active" data-device="desktop" title="Desktop"><i class="ti ti-device-desktop"></i></button>
+          <button class="device-btn" data-device="tablet" title="Tablet"><i class="ti ti-device-tablet"></i></button>
+          <button class="device-btn" data-device="mobile" title="Mobile"><i class="ti ti-device-mobile"></i></button>
+        </div>
+        <button class="pbar-btn" id="code-btn"><i class="ti ti-code" style="font-size:12px"></i> <span class="pbar-label">View code</span></button>
+        <button class="pbar-btn" id="fullscreen-btn"><i class="ti ti-arrows-maximize" style="font-size:12px"></i> <span class="pbar-label">Full screen</span></button>
+        <button class="pbar-btn" id="refresh-btn"><i class="ti ti-refresh" style="font-size:12px"></i> <span class="pbar-label">Refresh</span></button>
       </div>
       <div id="preview-wrap">
         <div id="preview-status">
