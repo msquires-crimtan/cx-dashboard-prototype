@@ -6,7 +6,7 @@
 <title>CX Dashboard — Editor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.x/tabler-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.x/dist/tabler-icons.min.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -129,10 +129,10 @@
   .chip.done{background:var(--t50);color:var(--t600);border:0.5px solid var(--t100);}
   .chip.error{background:var(--r50);color:var(--r600);border:0.5px solid var(--r100);}
   .chip.info{background:var(--b50);color:var(--b600);border:0.5px solid var(--b100);}
-  .revert-link,.copy-link{background:none;border:none;color:var(--g400);cursor:pointer;font-family:var(--sans);display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border-radius:var(--rad-sm);font-size:12px;transition:color .15s,background .15s;}
+  .revert-link,.copy-link{background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;font-family:var(--sans);display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border-radius:var(--rad-sm);font-size:12px;transition:color .15s,background .15s;}
   .copy-link:hover{color:var(--t600);background:var(--t50);}
   .revert-link:hover{color:var(--r600);background:var(--r50);}
-  .revert-link:disabled{opacity:.4;cursor:default;color:var(--g400)!important;background:none!important;}
+  .revert-link:disabled{opacity:.4;cursor:default;color:rgba(255,255,255,0.5)!important;background:none!important;}
   .think{display:flex;gap:4px;align-items:center;padding:9px 11px;}
   .dot{width:5px;height:5px;border-radius:50%;background:var(--g400);animation:pulse 1.2s infinite;}
   .dot:nth-child(2){animation-delay:.2s;}
