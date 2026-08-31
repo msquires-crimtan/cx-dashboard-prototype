@@ -564,7 +564,7 @@ app.post("/api/publish", requireAuth, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error("publish failed:", err.message);
-    res.status(502).json({ error: "Publish failed — please try again." });
+    res.status(502).json({ error: `Publish failed: ${err.message}` });
   }
 });
 
