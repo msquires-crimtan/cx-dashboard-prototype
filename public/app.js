@@ -622,6 +622,115 @@ codeModalCopy.addEventListener("click", () => {
   });
 });
 
+// ── Share preview modal ────────────────────────────────────────────────────────
+const shareBtn        = document.getElementById("share-btn");
+const shareModal       = document.getElementById("share-modal");
+const shareDurationSel = document.getElementById("share-duration");
+const shareCreateBtn   = document.getElementById("share-create-btn");
+const shareErrEl       = document.getElementById("share-err");
+const shareResultEl    = document.getElementById("share-result");
+const shareUrlOutput   = document.getElementById("share-url-output");
+const shareCopyBtn     = document.getElementById("share-copy-btn");
+const shareLinksList   = document.getElementById("share-links-list");
+
+document.getElementById("share-modal-close").addEventListener("click", () => shareModal.classList.remove("open"));
+
+function fmtExpiry(iso) {
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = d - now;
+  if (diffMs <= 0) return "expired";
+  const diffH = diffMs / 36e5;
+  if (diffH < 48) return `expires in ${Math.round(diffH)}h`;
+  return `expires ${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+}
+
+async function refreshShareLinks() {
+  shareLinksList.innerHTML = '<div class="share-empty">Loading…</div>';
+  try {
+    const res = await fetch("/api/share", { credentials: "same-origin" });
+    const links = await res.json();
+    if (!res.ok || !Array.isArray(links) || links.length === 0) {
+      shareLinksList.innerHTML = '<div class="share-empty">No active share links.</div>';
+      return;
+    }
+    shareLinksList.innerHTML = "";
+    links.forEach(link => {
+      const row = document.createElement("div");
+      row.className = "share-link-item";
+      const meta = document.createElement("span");
+      meta.className = "share-link-meta";
+      meta.textContent = `${link.url} · ${fmtExpiry(link.expires_at)}`;
+      const actions = document.createElement("div");
+      actions.className = "share-link-actions";
+      const copyBtn = document.createElement("button");
+      copyBtn.className = "icon-btn";
+      copyBtn.style.color = "var(--g600)";
+      copyBtn.title = "Copy link";
+      copyBtn.innerHTML = '<i class="ti ti-copy"></i>';
+      copyBtn.addEventListener("click", () => navigator.clipboard.writeText(link.url));
+      const revokeBtn = document.createElement("button");
+      revokeBtn.className = "icon-btn";
+      revokeBtn.style.color = "var(--r600)";
+      revokeBtn.title = "Revoke link";
+      revokeBtn.innerHTML = '<i class="ti ti-trash"></i>';
+      revokeBtn.addEventListener("click", async () => {
+        revokeBtn.disabled = true;
+        try {
+          await fetch(`/api/share/${link.id}/revoke`, { method: "POST", credentials: "same-origin" });
+        } catch {}
+        refreshShareLinks();
+      });
+      actions.append(copyBtn, revokeBtn);
+      row.append(meta, actions);
+      shareLinksList.appendChild(row);
+    });
+  } catch {
+    shareLinksList.innerHTML = '<div class="share-empty">Could not load share links.</div>';
+  }
+}
+
+shareBtn.addEventListener("click", () => {
+  shareModal.classList.add("open");
+  shareErrEl.style.display = "none";
+  shareResultEl.classList.remove("show");
+  refreshShareLinks();
+});
+
+shareCreateBtn.addEventListener("click", async () => {
+  shareErrEl.style.display = "none";
+  shareCreateBtn.disabled = true;
+  shareCreateBtn.textContent = "Creating…";
+  try {
+    const hours = Number(shareDurationSel.value);
+    const res = await fetch("/api/share", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ hours }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || "Failed to create link");
+    shareUrlOutput.value = data.url;
+    shareResultEl.classList.add("show");
+    refreshShareLinks();
+  } catch (err) {
+    shareErrEl.textContent = err.message || "Could not create share link.";
+    shareErrEl.style.display = "block";
+  } finally {
+    shareCreateBtn.disabled = false;
+    shareCreateBtn.textContent = "Create link";
+  }
+});
+
+shareCopyBtn.addEventListener("click", () => {
+  navigator.clipboard.writeText(shareUrlOutput.value).then(() => {
+    const original = shareCopyBtn.textContent;
+    shareCopyBtn.textContent = "Copied!";
+    setTimeout(() => { shareCopyBtn.textContent = original; }, 1200);
+  });
+});
+
 // ── Full-screen preview ───────────────────────────────────────────────────────
 const fullscreenBtn = document.getElementById("fullscreen-btn");
 fullscreenBtn.addEventListener("click", () => {

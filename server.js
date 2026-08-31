@@ -253,13 +253,9 @@ function currentEmail(req) {
   return verifyToken(parseCookies(req)[COOKIE_NAME])?.email || null;
 }
 
-// ── Prototype routes ──────────────────────────────────────────────────────────
-app.get("/prototype/ready", requireAuth, (req, res) => {
-  res.json({ ready: fs.existsSync(PROTO_PATH) });
-});
-
-app.get("/prototype", requireAuth, async (req, res) => {
-  await ensureRepo();
+// Shared by the authenticated editor preview (/prototype) and public share
+// links (/share/:token) — same document, same headers.
+function sendPrototypeHtml(res) {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
   res.setHeader("Cache-Control", "no-store");
@@ -270,6 +266,16 @@ app.get("/prototype", requireAuth, async (req, res) => {
   // hundreds of handlers in AI-editable markup.
   res.removeHeader("Content-Security-Policy");
   res.send(fs.readFileSync(PROTO_PATH, "utf-8"));
+}
+
+// ── Prototype routes ──────────────────────────────────────────────────────────
+app.get("/prototype/ready", requireAuth, (req, res) => {
+  res.json({ ready: fs.existsSync(PROTO_PATH) });
+});
+
+app.get("/prototype", requireAuth, async (req, res) => {
+  await ensureRepo();
+  sendPrototypeHtml(res);
 });
 
 app.get("/prototype/search", requireAuth, async (req, res) => {
@@ -401,6 +407,86 @@ app.post("/prototype/refresh", requireAuth, async (req, res) => {
     }
     res.json({ ok: true });
   } catch (err) { res.status(502).json({ error: err.message }); }
+});
+
+// ── Share links ─────────────────────────────────────────────────────────────
+// Time-limited, unauthenticated preview links a logged-in user can generate
+// and hand to anyone (client, stakeholder) without giving them editor access.
+const MAX_SHARE_HOURS = 24 * 30; // 30 days
+
+app.post("/api/share", requireAuth, async (req, res) => {
+  const hours = Number(req.body?.hours);
+  if (!Number.isFinite(hours) || hours <= 0 || hours > MAX_SHARE_HOURS) {
+    return res.status(400).json({ error: `hours must be between 0 and ${MAX_SHARE_HOURS}` });
+  }
+  const token = crypto.randomBytes(24).toString("base64url");
+  const expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+  try {
+    const { status, data } = await supabase("share_links", {
+      method: "POST",
+      body: { token, created_by: currentEmail(req), expires_at: expiresAt },
+      useServiceKey: true,
+    });
+    if (status >= 300) throw new Error("insert failed");
+    const row = Array.isArray(data) ? data[0] : null;
+    const url = `${req.protocol}://${req.get("host")}/share/${token}`;
+    res.json({ ok: true, id: row?.id, token, url, expiresAt });
+  } catch (err) {
+    res.status(502).json({ error: "Could not create share link — please try again." });
+  }
+});
+
+app.get("/api/share", requireAuth, async (req, res) => {
+  try {
+    const { status, data } = await supabase("share_links", {
+      query: `revoked=eq.false&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=id,token,created_by,expires_at,created_at&order=created_at.desc`,
+      useServiceKey: true,
+    });
+    if (status >= 300) throw new Error("query failed");
+    const host = `${req.protocol}://${req.get("host")}`;
+    const links = (Array.isArray(data) ? data : []).map(l => ({ ...l, url: `${host}/share/${l.token}` }));
+    res.json(links);
+  } catch (err) {
+    res.status(502).json({ error: "Could not load share links." });
+  }
+});
+
+app.post("/api/share/:id/revoke", requireAuth, async (req, res) => {
+  try {
+    const { status } = await supabase("share_links", {
+      method: "PATCH",
+      query: `id=eq.${encodeURIComponent(req.params.id)}`,
+      body: { revoked: true },
+      useServiceKey: true,
+    });
+    if (status >= 300) throw new Error("update failed");
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(502).json({ error: "Could not revoke this link." });
+  }
+});
+
+// Public — no login required. Anyone with a valid, unexpired token can view
+// the current prototype, read-only, no editor chrome.
+app.get("/share/:token", async (req, res) => {
+  try {
+    const { status, data } = await supabase("share_links", {
+      query: `token=eq.${encodeURIComponent(req.params.token)}&select=revoked,expires_at`,
+      useServiceKey: true,
+    });
+    const link = status === 200 && Array.isArray(data) ? data[0] : null;
+    const expired = !link || link.revoked || new Date(link.expires_at) <= new Date();
+    if (expired) {
+      return res.status(410).send(
+        "<html><body style='font-family:sans-serif;padding:60px;text-align:center;color:#666'>" +
+        "<h2>This preview link has expired</h2><p>Ask whoever shared it to generate a new one.</p></body></html>"
+      );
+    }
+    await ensureRepo();
+    sendPrototypeHtml(res);
+  } catch (err) {
+    res.status(502).send("Could not load this preview — please try again.");
+  }
 });
 
 // ── Anthropic proxy ───────────────────────────────────────────────────────────
