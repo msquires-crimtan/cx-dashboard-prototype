@@ -247,7 +247,8 @@ function renderHistory() {
     if (turn.edit_count > 0 && !turn.rolled_back) {
       const btn = document.createElement("button");
       btn.className = "h-undo-btn";
-      btn.innerHTML = '<i class="ti ti-arrow-back-up" style="font-size:10px"></i> Roll back here';
+      btn.title = "Roll back to before this change";
+      btn.innerHTML = '<i class="ti ti-arrow-back-up"></i>';
       btn.addEventListener("click", () => rollbackTurn(turn.id, btn));
       el.appendChild(btn);
     }
@@ -310,7 +311,8 @@ function addRevertLink(mi, turnId) {
   mi.dataset.turnId = turnId;
   const btn = document.createElement("button");
   btn.className = "revert-link";
-  btn.innerHTML = '<i class="ti ti-arrow-back-up" style="font-size:10px"></i> Revert this change';
+  btn.title = "Revert this change";
+  btn.innerHTML = '<i class="ti ti-arrow-back-up"></i>';
   btn.addEventListener("click", () => rollbackTurn(turnId, btn));
   mi.appendChild(btn);
 }
