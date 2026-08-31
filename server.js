@@ -641,7 +641,7 @@ app.post("/api/admin/clients", requireAuth, async (req, res) => {
     res.json({ ok: true, slug, loginUrl: `${origin}/client/${slug}/login` });
   } catch (err) {
     console.error("admin/clients create failed:", err.message);
-    res.status(502).json({ error: "Could not create client — please try again." });
+    res.status(502).json({ error: `Could not create client: ${err.message}` });
   }
 });
 
