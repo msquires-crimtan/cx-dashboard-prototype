@@ -277,6 +277,12 @@ function syncChatChipsWithLog() {
 // login, so every user sees the same thread regardless of who said what.
 async function loadInitialChat() {
   await refreshSharedLog();
+  // Only greet on a fresh/empty project — once there's real shared history,
+  // showing "I'm Compass AI" again on every login is just noise.
+  if (sharedLog.some(t => t.user_message)) {
+    document.getElementById("intro-msg-1")?.remove();
+    document.getElementById("intro-msg-2")?.remove();
+  }
   sharedLog.forEach(turn => {
     if (!turn.user_message) return;
     addMsg("user", esc(turn.user_message), null, false, senderName(turn.email));
@@ -286,7 +292,7 @@ async function loadInitialChat() {
         ? { type: "info", icon: "arrow-back-up", label: "Reverted" }
         : { type: "done", icon: "circle-check", label: `${turn.edit_count} change${turn.edit_count > 1 ? "s" : ""} applied` });
     }
-    const assistantMi = addMsg("assistant", esc(turn.assistant_summary || ""), chips, false, "AI Editor");
+    const assistantMi = addMsg("assistant", esc(turn.assistant_summary || ""), chips, false, "Compass AI");
     if (turn.edit_count > 0 && !turn.rolled_back) addRevertLink(assistantMi, turn.id);
   });
 }
@@ -503,7 +509,7 @@ async function handleSend() {
       const chipId = "chip-" + Date.now();
       const assistantMi = addMsg("assistant", esc(summary) || "Applying changes…", [
         { type: "working", icon: "loader", label: `Applying ${edits.length} edit${edits.length > 1 ? "s" : ""}…`, id: chipId }
-      ], false, "AI Editor");
+      ], false, "Compass AI");
 
       const { results, turnId } = await applyTurn(text, edits, summary);
       const failed = results.filter(r => !r.ok);
@@ -532,7 +538,7 @@ async function handleSend() {
       }
     } else {
       // No edits — just a conversational response
-      addMsg("assistant", esc(summary || "I didn't make any changes — could you rephrase what you'd like updated?"), null, false, "AI Editor");
+      addMsg("assistant", esc(summary || "I didn't make any changes — could you rephrase what you'd like updated?"), null, false, "Compass AI");
     }
   } catch (err) {
     if (err.message !== "session_expired") {

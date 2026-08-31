@@ -232,7 +232,7 @@
     <div class="badge">Connected</div>
     <button class="icon-btn" id="undo-btn" title="Undo most recent change (any user)" disabled><i class="ti ti-arrow-back-up"></i></button>
     <button class="icon-btn" id="reset-btn" title="Reset to published version"><i class="ti ti-refresh"></i></button>
-    <button class="icon-btn" id="logout-btn" title="Sign out"><i class="ti ti-logout"></i></button>
+    <button class="icon-btn" id="logout-btn" title="Sign out" style="width:auto;gap:5px;padding:0 9px;"><i class="ti ti-logout"></i><span style="font-size:12px;font-weight:500;">Sign out</span></button>
   </div>
   <div id="split">
 
@@ -245,14 +245,14 @@
 
       <div id="chat-view">
         <div id="msgs">
-          <div class="msg assistant fi">
+          <div class="msg assistant fi" id="intro-msg-1">
             <div class="av ai"><i class="ti ti-plane-tilt"></i></div>
             <div class="mi">
-              <div class="msg-sender">AI Editor</div>
-              <div class="bub">Hi! I'm your AI editor for <strong>CX Dashboard</strong>. I can make any change you describe — text, data, new sections, API connections, styling. Just tell me what you want and I'll apply it instantly to the preview.</div>
+              <div class="msg-sender">Compass AI</div>
+              <div class="bub">I'm Compass AI.</div>
             </div>
           </div>
-          <div class="msg assistant fi">
+          <div class="msg assistant fi" id="intro-msg-2">
             <div class="av ai"><i class="ti ti-bulb"></i></div>
             <div class="mi">
               <div class="bub" style="background:var(--b50);border-color:var(--b100);color:var(--b600);">
