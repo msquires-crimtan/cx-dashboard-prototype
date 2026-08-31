@@ -63,6 +63,16 @@
   .btn-primary:disabled{opacity:.4;cursor:not-allowed;}
   .notice{font-size:12px;color:rgba(255,255,255,0.3);line-height:1.55;padding-top:4px;border-top:0.5px solid rgba(255,255,255,0.08);text-align:center;}
   .compass-pill{display:inline-flex;align-items:center;gap:6px;margin-top:4px;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);font-size:11.5px;color:rgba(255,255,255,0.6);}
+  .compass-bar{
+    display:inline-flex;align-items:center;gap:8px;padding:7px 15px 7px 11px;border-radius:999px;
+    background:linear-gradient(135deg,#8a0022 0%,#4a0016 100%);
+    border:0.5px solid rgba(255,255,255,0.12);
+    box-shadow:0 2px 10px rgba(122,0,32,0.28), inset 0 1px 0 rgba(255,255,255,0.08);
+    cursor:default;transition:box-shadow .15s,transform .15s;
+  }
+  .compass-bar:hover{box-shadow:0 4px 16px rgba(122,0,32,0.4), inset 0 1px 0 rgba(255,255,255,0.1);transform:translateY(-0.5px);}
+  .compass-bar-label{font-size:11.5px;font-weight:500;color:#fff;letter-spacing:.01em;}
+  .compass-bar-arrow{font-size:11px;color:rgba(255,255,255,0.5);}
   .forgot-link{background:none;border:none;font-family:var(--sans);font-size:12px;color:rgba(255,255,255,0.5);text-decoration:underline;text-underline-offset:2px;cursor:pointer;text-align:center;margin-top:-6px;}
   .forgot-link:hover{color:rgba(255,255,255,0.8);}
   .forgot-note{display:none;font-size:12px;color:rgba(255,255,255,0.6);text-align:center;line-height:1.5;margin-top:-6px;}
@@ -256,10 +266,10 @@
           </div>
         </div>
         <div style="padding:7px 12px 0;display:flex;align-items:center;justify-content:center;">
-          <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(180,30,40,0.07);border:0.5px solid rgba(180,30,40,0.15);border-radius:999px;padding:5px 13px 5px 9px;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><circle cx="12" cy="12" r="10" stroke="#B41E28" stroke-width="1.5"/><circle cx="12" cy="12" r="3" fill="#B41E28"/><line x1="12" y1="2" x2="12" y2="6" stroke="#B41E28" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="18" x2="12" y2="22" stroke="#B41E28" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="12" x2="6" y2="12" stroke="#B41E28" stroke-width="1.5" stroke-linecap="round"/><line x1="18" y1="12" x2="22" y2="12" stroke="#B41E28" stroke-width="1.5" stroke-linecap="round"/></svg>
-            <span style="font-size:11.5px;font-weight:500;color:#B41E28;">Powered by Compass AI</span>
-            <span style="font-size:11px;color:rgba(180,30,40,0.4)">→</span>
+          <div class="compass-bar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/><circle cx="12" cy="12" r="3" fill="rgba(255,255,255,0.85)"/><line x1="12" y1="2" x2="12" y2="6" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="18" x2="12" y2="22" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="12" x2="6" y2="12" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-linecap="round"/><line x1="18" y1="12" x2="22" y2="12" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span class="compass-bar-label">Powered by Compass AI</span>
+            <span class="compass-bar-arrow">→</span>
           </div>
         </div>
         <div id="inp">
