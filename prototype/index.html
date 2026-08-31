@@ -622,18 +622,23 @@ function toggleTheme() {
   document.getElementById('ts-label') && (document.getElementById('ts-label').textContent = isLight ? 'Light' : 'Dark');
   const logo = document.getElementById('ct-logo');
   if (logo) logo.src = isLight ? LOGO_LIGHT : LOGO_DARK;
-  localStorage.setItem('ct-theme', isLight ? 'light' : 'dark');
+  try { localStorage.setItem('ct-theme', isLight ? 'light' : 'dark'); } catch {}
 }
-// restore saved theme
-if (localStorage.getItem('ct-theme') === 'light') {
-  document.documentElement.classList.add('light');
-  document.addEventListener('DOMContentLoaded', () => {
-    const lbl = document.getElementById('ts-label');
-    if (lbl) lbl.textContent = 'Light';
-    const logo = document.getElementById('ct-logo');
-    if (logo) logo.src = LOGO_LIGHT;
-  });
-}
+// restore saved theme — localStorage can throw (sandboxed iframes, some
+// embedded previews, private-browsing edge cases); this used to be
+// unguarded, so that throw aborted the rest of this script, including the
+// row data init and render() below it — leaving the whole dashboard empty.
+try {
+  if (localStorage.getItem('ct-theme') === 'light') {
+    document.documentElement.classList.add('light');
+    document.addEventListener('DOMContentLoaded', () => {
+      const lbl = document.getElementById('ts-label');
+      if (lbl) lbl.textContent = 'Light';
+      const logo = document.getElementById('ct-logo');
+      if (logo) logo.src = LOGO_LIGHT;
+    });
+  }
+} catch {}
 
 document.getElementById('fdate').textContent = new Date().toLocaleDateString('en-GB',{year:'numeric',month:'long'});
 
