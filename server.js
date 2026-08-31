@@ -246,39 +246,31 @@ function git(...args) {
 }
 
 async function ensureRepo() {
-  const repoUrl = `https://${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git`;
-
   if (fs.existsSync(path.join(REPO_DIR, ".git")) && fs.existsSync(PROTO_PATH)) {
-    console.log("Repo ready ✓");
     return;
   }
 
-  if (!fs.existsSync(path.join(REPO_DIR, ".git"))) {
-    console.log("Cloning repo…");
-    fs.mkdirSync(REPO_DIR, { recursive: true });
-    try {
-      execFileSync("git", ["clone", repoUrl, REPO_DIR], {
-        encoding: "utf-8",
-        env: {
-          ...process.env,
-          GIT_AUTHOR_NAME: "CX Dashboard",
-          GIT_AUTHOR_EMAIL: "editor@crimtan.com",
-          GIT_COMMITTER_NAME: "CX Dashboard",
-          GIT_COMMITTER_EMAIL: "editor@crimtan.com",
-        }
-      });
-      console.log("Repo cloned ✓");
-    } catch (err) {
-      console.error("Clone failed:", err.message);
+  const repoUrl = `https://${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git`;
+  console.log("Cloning repo…");
+  // Clear out any partial state from a previous failed attempt — `git clone`
+  // refuses to target a non-empty directory, so a bad prior attempt would
+  // otherwise wedge every future call here on the same broken state.
+  fs.rmSync(REPO_DIR, { recursive: true, force: true });
+  fs.mkdirSync(REPO_DIR, { recursive: true });
+  execFileSync("git", ["clone", repoUrl, REPO_DIR], {
+    encoding: "utf-8",
+    env: {
+      ...process.env,
+      GIT_AUTHOR_NAME: "CX Dashboard",
+      GIT_AUTHOR_EMAIL: "editor@crimtan.com",
+      GIT_COMMITTER_NAME: "CX Dashboard",
+      GIT_COMMITTER_EMAIL: "editor@crimtan.com",
     }
-  }
-
-  // If prototype still missing after clone, write a placeholder
+  });
   if (!fs.existsSync(PROTO_PATH)) {
-    console.log("Prototype file missing — writing placeholder…");
-    fs.mkdirSync(path.dirname(PROTO_PATH), { recursive: true });
-    fs.writeFileSync(PROTO_PATH, "<html><body style='font-family:sans-serif;padding:40px'><p>Prototype not yet loaded.</p></body></html>", "utf-8");
+    throw new Error(`Cloned repo but ${PROTOTYPE_FILE} is missing from it.`);
   }
+  console.log("Repo cloned ✓");
 }
 
 async function commitAndPush(message) {
@@ -334,25 +326,33 @@ app.get("/prototype/ready", requireAuth, (req, res) => {
 });
 
 app.get("/prototype", requireAuth, async (req, res) => {
-  await ensureRepo();
-  sendPrototypeHtml(res);
+  try {
+    await ensureRepo();
+    sendPrototypeHtml(res);
+  } catch (err) {
+    res.status(502).send("Could not load the prototype — please try again.");
+  }
 });
 
 app.get("/prototype/search", requireAuth, async (req, res) => {
   const keyword = req.query.q || "";
   if (!keyword) return res.status(400).json({ error: "q required" });
-  await ensureRepo();
-  const html = fs.readFileSync(PROTO_PATH, "utf-8");
-  const lines = html.split("\n");
-  const contexts = [];
-  lines.forEach((line, i) => {
-    if (line.toLowerCase().includes(keyword.toLowerCase()) && contexts.length < 3) {
-      const start = Math.max(0, i - 10);
-      const end = Math.min(lines.length, i + 20);
-      contexts.push({ line: i + 1, context: lines.slice(start, end).join("\n") });
-    }
-  });
-  res.json({ found: contexts.length > 0, contexts });
+  try {
+    await ensureRepo();
+    const html = fs.readFileSync(PROTO_PATH, "utf-8");
+    const lines = html.split("\n");
+    const contexts = [];
+    lines.forEach((line, i) => {
+      if (line.toLowerCase().includes(keyword.toLowerCase()) && contexts.length < 3) {
+        const start = Math.max(0, i - 10);
+        const end = Math.min(lines.length, i + 20);
+        contexts.push({ line: i + 1, context: lines.slice(start, end).join("\n") });
+      }
+    });
+    res.json({ found: contexts.length > 0, contexts });
+  } catch (err) {
+    res.status(502).json({ error: "Could not search the prototype." });
+  }
 });
 
 // A "turn" = one chat request's worth of edits, applied and logged atomically.
@@ -363,7 +363,8 @@ app.get("/prototype/search", requireAuth, async (req, res) => {
 app.post("/api/chat/turn", requireAuth, async (req, res) => {
   const { user_message, edits, summary } = req.body;
   if (!Array.isArray(edits)) return res.status(400).json({ error: "edits array required" });
-  await ensureRepo();
+  try { await ensureRepo(); }
+  catch (err) { return res.status(502).json({ error: "Could not load the prototype — please try again." }); }
   let html = fs.readFileSync(PROTO_PATH, "utf-8");
   const snapshotBefore = html;
 
