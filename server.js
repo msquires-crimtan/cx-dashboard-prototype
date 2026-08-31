@@ -628,7 +628,7 @@ app.post("/api/admin/clients", requireAuth, async (req, res) => {
     await stytchClient.passwords.email.resetStart({
       organization_id: org.organization.organization_id,
       email_address: login_email,
-      reset_password_redirect_url: `${origin}/client/${slug}/set-password`,
+      reset_password_redirect_url: `${origin}/client-setup?client_slug=${encodeURIComponent(slug)}`,
     });
 
     const inserted = await supabase("clients", {
@@ -655,7 +655,7 @@ app.post("/api/admin/clients/:id/resend-invite", requireAuth, async (req, res) =
     await stytchClient.passwords.email.resetStart({
       organization_id: client.stytch_organization_id,
       email_address: client.login_email,
-      reset_password_redirect_url: `${origin}/client/${client.slug}/set-password`,
+      reset_password_redirect_url: `${origin}/client-setup?client_slug=${encodeURIComponent(client.slug)}`,
     });
     res.json({ ok: true });
   } catch (err) {
@@ -692,6 +692,20 @@ app.get("/client/:slug/login", async (req, res) => {
 app.get("/client/:slug/set-password", async (req, res) => {
   try {
     const client = await getClientBySlug(req.params.slug);
+    if (!client || !client.active) return res.status(404).send("Unknown client.");
+    res.sendFile(path.join(__dirname, "public", "client-set-password.html"));
+  } catch (err) {
+    res.status(502).send("Could not load this page — please try again.");
+  }
+});
+
+// Fixed path used as the Stytch password-reset/invite redirect URL — Stytch's
+// redirect allowlist only supports query-param placeholders, not dynamic path
+// segments, so the client's slug travels as ?client_slug= instead of in the
+// path here (client-auth.js reads it from either place).
+app.get("/client-setup", async (req, res) => {
+  try {
+    const client = await getClientBySlug(String(req.query.client_slug || ""));
     if (!client || !client.active) return res.status(404).send("Unknown client.");
     res.sendFile(path.join(__dirname, "public", "client-set-password.html"));
   } catch (err) {

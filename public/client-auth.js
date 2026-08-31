@@ -1,7 +1,9 @@
 // Drives both /client/:slug/login (email + password) and
-// /client/:slug/set-password (first-time password + MFA enrollment) — both
+// /client-setup?client_slug=... (first-time password + MFA enrollment, linked
+// from the invite email — a fixed path since Stytch's redirect-URL allowlist
+// only supports query-param placeholders, not dynamic path segments) — both
 // pages share the MFA step, just reached from a different first step.
-const slug = location.pathname.split("/")[2];
+const slug = new URLSearchParams(location.search).get("client_slug") || location.pathname.split("/")[2];
 
 async function postJSON(url, body) {
   const res = await fetch(url, {
