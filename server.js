@@ -624,6 +624,14 @@ app.post("/api/admin/clients", requireAuth, async (req, res) => {
       email_jit_provisioning: "NOT_ALLOWED",
     });
 
+    // passwords.email.resetStart only works for an existing Member — it's a
+    // "set/reset your password" flow, not an invite-and-provision one — so the
+    // Member has to be created explicitly first.
+    await stytchClient.organizations.members.create({
+      organization_id: org.organization.organization_id,
+      email_address: login_email,
+    });
+
     const origin = `${req.protocol}://${req.get("host")}`;
     await stytchClient.passwords.email.resetStart({
       organization_id: org.organization.organization_id,
