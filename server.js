@@ -249,14 +249,8 @@ async function commitAndPush(message) {
   console.log("Pushed:", message);
 }
 
-// ── Undo stack ────────────────────────────────────────────────────────────────
-// Keyed per session (not global) — otherwise one user's Undo could revert
-// another user's most recent edit when multiple people edit concurrently.
-const undoStacks = new Map(); // sessionCookie -> string[]
-function getUndoStack(req) {
-  const key = parseCookies(req)[COOKIE_NAME] || "anon";
-  if (!undoStacks.has(key)) undoStacks.set(key, []);
-  return undoStacks.get(key);
+function currentEmail(req) {
+  return verifyToken(parseCookies(req)[COOKIE_NAME])?.email || null;
 }
 
 // ── Prototype routes ──────────────────────────────────────────────────────────
@@ -295,29 +289,107 @@ app.get("/prototype/search", requireAuth, async (req, res) => {
   res.json({ found: contexts.length > 0, contexts });
 });
 
-app.post("/prototype/edit", requireAuth, async (req, res) => {
-  const { find, replace, message } = req.body;
-  if (!find || replace === undefined) return res.status(400).json({ error: "find and replace required" });
+// A "turn" = one chat request's worth of edits, applied and logged atomically.
+// The whole-site chat/edit history lives in Supabase (cxdashboard.chat_log),
+// not in server memory or per-session state — every logged-in user sees the
+// same shared record, and any turn can be rolled back by anyone, matching how
+// Lovable's chat history works.
+app.post("/api/chat/turn", requireAuth, async (req, res) => {
+  const { user_message, edits, summary } = req.body;
+  if (!Array.isArray(edits)) return res.status(400).json({ error: "edits array required" });
   await ensureRepo();
   let html = fs.readFileSync(PROTO_PATH, "utf-8");
-  const occurrences = html.split(find).length - 1;
-  if (occurrences === 0) return res.status(404).json({ error: "Text not found", find: find.substring(0, 100) });
-  if (occurrences > 1) return res.status(409).json({ error: `This text appears ${occurrences} times in the file — include more surrounding context so the edit only targets one spot.`, find: find.substring(0, 100) });
-  const undoStack = getUndoStack(req);
-  undoStack.push(html); if (undoStack.length > 20) undoStack.shift();
-  html = html.split(find).join(replace);
-  fs.writeFileSync(PROTO_PATH, html, "utf-8");
-  commitAndPush(message || "Content update via CX Dashboard editor").catch(console.error);
-  res.json({ ok: true });
+  const snapshotBefore = html;
+
+  const results = [];
+  for (const edit of edits) {
+    const { find, replace } = edit || {};
+    if (!find || replace === undefined) { results.push({ ok: false, error: "find and replace required", find: find || "" }); continue; }
+    const occurrences = html.split(find).length - 1;
+    if (occurrences === 0) { results.push({ ok: false, error: "Text not found", find: find.substring(0, 100) }); continue; }
+    if (occurrences > 1) { results.push({ ok: false, error: `This text appears ${occurrences} times in the file — include more surrounding context so the edit only targets one spot.`, find: find.substring(0, 100) }); continue; }
+    html = html.split(find).join(replace);
+    results.push({ ok: true, find: find.substring(0, 100) });
+  }
+
+  const appliedCount = results.filter(r => r.ok).length;
+  if (appliedCount > 0) {
+    fs.writeFileSync(PROTO_PATH, html, "utf-8");
+    commitAndPush((summary || user_message || "Update via CX Dashboard editor").substring(0, 100)).catch(console.error);
+  }
+
+  let turnId = null;
+  try {
+    const logged = await supabase("chat_log", {
+      method: "POST",
+      body: {
+        email: currentEmail(req),
+        user_message: user_message || "",
+        assistant_summary: summary || "",
+        edit_count: appliedCount,
+        snapshot_before: appliedCount > 0 ? snapshotBefore : null,
+      },
+      useServiceKey: true,
+    });
+    turnId = Array.isArray(logged.data) ? logged.data[0]?.id : null;
+  } catch (err) { console.error("chat_log insert failed:", err.message); }
+
+  res.json({ ok: true, results, turnId });
 });
 
-app.post("/prototype/undo", requireAuth, async (req, res) => {
-  const undoStack = getUndoStack(req);
-  if (undoStack.length === 0) return res.status(400).json({ error: "Nothing to undo" });
-  const prev = undoStack.pop();
-  fs.writeFileSync(PROTO_PATH, prev, "utf-8");
-  commitAndPush("Undo last change").catch(console.error);
-  res.json({ ok: true, remaining: undoStack.length });
+// GET the full shared chat/edit history — a record of the site, not of the
+// requesting user, so every user sees every turn from everyone.
+app.get("/api/chat/log", requireAuth, async (req, res) => {
+  try {
+    const { status, data } = await supabase("chat_log", {
+      query: "select=id,email,user_message,assistant_summary,edit_count,rolled_back,created_at&order=created_at.asc&limit=500",
+      useServiceKey: true,
+    });
+    res.status(status).json(data);
+  } catch (err) {
+    res.status(502).json({ error: "Could not load history — please try again." });
+  }
+});
+
+// Roll back a specific turn (any turn, by any user) to how the prototype
+// looked immediately before that turn's edits were applied.
+app.post("/api/chat/turn/:id/rollback", requireAuth, async (req, res) => {
+  try {
+    const { status, data } = await supabase("chat_log", {
+      query: `id=eq.${encodeURIComponent(req.params.id)}&select=*`,
+      useServiceKey: true,
+    });
+    const turn = status === 200 && Array.isArray(data) ? data[0] : null;
+    if (!turn || !turn.snapshot_before) return res.status(404).json({ error: "Nothing to roll back for this change." });
+
+    await ensureRepo();
+    const currentHtml = fs.readFileSync(PROTO_PATH, "utf-8");
+    fs.writeFileSync(PROTO_PATH, turn.snapshot_before, "utf-8");
+    commitAndPush(`Reverted: ${(turn.user_message || "change").substring(0, 80)}`).catch(console.error);
+
+    await supabase("chat_log", {
+      method: "PATCH",
+      query: `id=eq.${encodeURIComponent(req.params.id)}`,
+      body: { rolled_back: true },
+      useServiceKey: true,
+    });
+
+    await supabase("chat_log", {
+      method: "POST",
+      body: {
+        email: currentEmail(req),
+        user_message: `(reverted "${(turn.user_message || "").substring(0, 80)}")`,
+        assistant_summary: "Reverted to the state before this change.",
+        edit_count: 0,
+        snapshot_before: currentHtml,
+      },
+      useServiceKey: true,
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(502).json({ error: "Rollback failed — please try again." });
+  }
 });
 
 app.post("/prototype/refresh", requireAuth, async (req, res) => {

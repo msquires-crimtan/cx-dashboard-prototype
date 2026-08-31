@@ -73,7 +73,7 @@
   #app.on{display:flex;}
 
   /* Topbar */
-  #topbar{height:46px;flex-shrink:0;background:var(--g50);border-bottom:0.5px solid var(--g200);display:flex;align-items:center;gap:10px;padding:0 16px;}
+  #topbar{height:58px;flex-shrink:0;background:var(--g50);border-bottom:0.5px solid var(--g200);display:flex;align-items:center;gap:12px;padding:0 18px;}
   .tb-icon{width:26px;height:26px;border-radius:var(--rad-sm);background:var(--t50);display:flex;align-items:center;justify-content:center;color:var(--t600);font-size:13px;flex-shrink:0;}
   .tb-name{font-size:13px;font-weight:500;flex:1;}
   .badge{display:flex;align-items:center;gap:5px;font-size:11px;padding:3px 8px;border-radius:var(--pill);background:var(--t50);color:var(--t600);border:0.5px solid var(--t100);}
@@ -98,21 +98,26 @@
   #msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;}
   #msgs::-webkit-scrollbar{width:4px;}
   #msgs::-webkit-scrollbar-thumb{background:var(--g200);border-radius:4px;}
-  .msg{display:flex;gap:8px;align-items:flex-start;}
+  .msg{display:flex;gap:9px;align-items:flex-start;}
   .msg.user{flex-direction:row-reverse;}
-  .av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;margin-top:2px;}
+  .av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;flex-shrink:0;margin-top:2px;}
   .av.ai{background:var(--t50);color:var(--t600);border:0.5px solid var(--t100);}
   .av.user{background:var(--t600);color:var(--t50);}
   .mi{display:flex;flex-direction:column;max-width:86%;}
-  .bub{padding:8px 11px;font-size:13px;line-height:1.6;border-radius:11px;}
+  .msg-sender{font-size:10.5px;font-weight:600;color:var(--g400);margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em;}
+  .msg.user .msg-sender{text-align:right;}
+  .bub{padding:9px 12px;font-size:13px;line-height:1.6;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,0.03);}
   .msg.assistant .bub{background:var(--g50);color:var(--g900);border:0.5px solid var(--g100);border-top-left-radius:3px;}
   .msg.user .bub{background:var(--t600);color:var(--t50);border-top-right-radius:3px;}
   .bub code{font-family:var(--mono);font-size:11px;background:rgba(0,0,0,0.07);padding:1px 4px;border-radius:3px;}
-  .chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 8px;border-radius:var(--pill);margin-top:4px;align-self:flex-start;}
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 8px;border-radius:var(--pill);margin-top:4px;align-self:flex-start;transition:background .15s,color .15s,border-color .15s;}
   .chip.working{background:var(--a50);color:var(--a600);border:0.5px solid var(--a100);}
   .chip.done{background:var(--t50);color:var(--t600);border:0.5px solid var(--t100);}
   .chip.error{background:var(--r50);color:var(--r600);border:0.5px solid var(--r100);}
   .chip.info{background:var(--b50);color:var(--b600);border:0.5px solid var(--b100);}
+  .revert-link{background:none;border:none;font-size:11px;color:var(--g400);cursor:pointer;font-family:var(--sans);margin-top:5px;align-self:flex-start;display:inline-flex;align-items:center;gap:4px;padding:0;transition:color .15s;}
+  .revert-link:hover{color:var(--r600);}
+  .revert-link:disabled{opacity:.4;cursor:default;color:var(--g400)!important;}
   .think{display:flex;gap:4px;align-items:center;padding:9px 11px;}
   .dot{width:5px;height:5px;border-radius:50%;background:var(--g400);animation:pulse 1.2s infinite;}
   .dot:nth-child(2){animation-delay:.2s;}
@@ -132,19 +137,37 @@
   #history-view.active{display:block;}
   .h-empty{padding:24px;text-align:center;font-size:13px;color:var(--g400);}
   .h-item{padding:10px 12px;border:0.5px solid var(--g200);border-radius:var(--rad-sm);margin-bottom:8px;background:#fff;}
-  .h-item-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
-  .h-item-time{font-size:11px;color:var(--g400);font-family:var(--mono);}
+  .h-item.rolled-back{opacity:.5;}
+  .h-item-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;gap:8px;}
+  .h-item-who{font-size:11px;color:var(--t600);font-weight:600;}
+  .h-item-time{font-size:11px;color:var(--g400);font-family:var(--mono);white-space:nowrap;}
   .h-item-desc{font-size:12.5px;color:var(--g900);line-height:1.4;}
   .h-undo-btn{font-size:11px;color:var(--r600);background:none;border:0.5px solid var(--r100);border-radius:var(--rad-sm);padding:2px 7px;cursor:pointer;font-family:var(--sans);}
   .h-undo-btn:hover{background:var(--r50);}
+  .h-undo-btn:disabled{opacity:.4;cursor:default;}
+
+  /* Code modal */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(20,10,10,0.5);z-index:200;align-items:center;justify-content:center;padding:24px;}
+  .modal-overlay.open{display:flex;}
+  .code-modal-card{width:100%;max-width:900px;max-height:80vh;background:#fff;border-radius:var(--rad);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+  .code-modal-hdr{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:0.5px solid var(--g200);flex-shrink:0;}
+  .code-modal-title{font-size:13px;font-weight:600;flex:1;}
+  .code-modal-body{flex:1;overflow:auto;background:#1c1c1a;padding:16px;}
+  .code-modal-body pre{margin:0;color:#e8e8e4;font-family:var(--mono);font-size:11.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;}
+  .code-modal-ftr{display:flex;justify-content:flex-end;gap:8px;padding:10px 16px;border-top:0.5px solid var(--g200);flex-shrink:0;}
+  .btn-modal-sm{font-size:12px;padding:6px 12px;border-radius:var(--rad-sm);border:0.5px solid var(--g200);background:#fff;cursor:pointer;font-family:var(--sans);color:var(--g900);}
+  .btn-modal-sm:hover{background:var(--g100);}
+
+  /* Full-screen preview */
+  #app.preview-fullscreen #chat-panel{display:none;}
 
   /* Preview panel */
   #preview-panel{flex:1;display:flex;flex-direction:column;background:var(--g100);min-width:0;}
   #preview-bar{height:36px;flex-shrink:0;background:var(--g50);border-bottom:0.5px solid var(--g200);display:flex;align-items:center;gap:10px;padding:0 14px;}
   .plbl{font-size:11px;font-weight:500;color:var(--g400);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;}
   .purl{font-size:11px;color:var(--g600);flex:1;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  #refresh-btn{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--g400);background:none;border:none;cursor:pointer;font-family:var(--sans);padding:3px 7px;border-radius:var(--rad-sm);transition:color .15s,background .15s;white-space:nowrap;}
-  #refresh-btn:hover{color:var(--t600);background:var(--t50);}
+  .pbar-btn{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--g400);background:none;border:none;cursor:pointer;font-family:var(--sans);padding:3px 7px;border-radius:var(--rad-sm);transition:color .15s,background .15s;white-space:nowrap;}
+  .pbar-btn:hover{color:var(--t600);background:var(--t50);}
   .spinning i{animation:spin .7s linear infinite;display:inline-block;}
   @keyframes spin{to{transform:rotate(360deg);}}
   #preview-wrap{flex:1;position:relative;}
@@ -192,12 +215,12 @@
 <!-- App -->
 <div id="app">
   <div id="topbar">
-    <img src="/crimtan-logo-black.png" alt="Crimtan" style="height:26px;width:auto;object-fit:contain;flex-shrink:0;">
-    <div style="width:0.5px;height:20px;background:var(--g200);flex-shrink:0;"></div>
+    <img src="/crimtan-logo-black.png" alt="Crimtan" style="height:36px;width:auto;object-fit:contain;flex-shrink:0;">
+    <div style="width:0.5px;height:24px;background:var(--g200);flex-shrink:0;"></div>
     <div class="tb-icon"><i class="ti ti-plane-tilt"></i></div>
     <div class="tb-name">CX Dashboard — AI editor</div>
     <div class="badge">Connected</div>
-    <button class="icon-btn" id="undo-btn" title="Undo last change" disabled style="display:none"><i class="ti ti-arrow-back-up"></i></button>
+    <button class="icon-btn" id="undo-btn" title="Undo most recent change (any user)" disabled><i class="ti ti-arrow-back-up"></i></button>
     <button class="icon-btn" id="reset-btn" title="Reset to published version"><i class="ti ti-refresh"></i></button>
     <button class="icon-btn" id="logout-btn" title="Sign out"><i class="ti ti-logout"></i></button>
   </div>
@@ -215,6 +238,7 @@
           <div class="msg assistant fi">
             <div class="av ai"><i class="ti ti-plane-tilt"></i></div>
             <div class="mi">
+              <div class="msg-sender">AI Editor</div>
               <div class="bub">Hi! I'm your AI editor for <strong>CX Dashboard</strong>. I can make any change you describe — text, data, new sections, API connections, styling. Just tell me what you want and I'll apply it instantly to the preview.</div>
             </div>
           </div>
@@ -254,7 +278,9 @@
       <div id="preview-bar">
         <span class="plbl">Live preview</span>
         <span class="purl">CX Dashboard · v30 · local</span>
-        <button id="refresh-btn"><i class="ti ti-refresh" style="font-size:12px"></i> Refresh</button>
+        <button class="pbar-btn" id="code-btn"><i class="ti ti-code" style="font-size:12px"></i> View code</button>
+        <button class="pbar-btn" id="fullscreen-btn"><i class="ti ti-arrows-maximize" style="font-size:12px"></i> Full screen</button>
+        <button class="pbar-btn" id="refresh-btn"><i class="ti ti-refresh" style="font-size:12px"></i> Refresh</button>
       </div>
       <div id="preview-wrap">
         <div id="preview-status">
@@ -265,6 +291,21 @@
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- Code view modal -->
+<div class="modal-overlay" id="code-modal">
+  <div class="code-modal-card">
+    <div class="code-modal-hdr">
+      <span class="code-modal-title">📄 Prototype source (read-only)</span>
+      <button class="icon-btn" id="code-modal-close" title="Close"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="code-modal-body"><pre id="code-modal-pre">Loading…</pre></div>
+    <div class="code-modal-ftr">
+      <button class="btn-modal-sm" id="code-modal-copy">Copy</button>
+      <button class="btn-modal-sm" id="code-modal-close-2">Close</button>
+    </div>
   </div>
 </div>
 

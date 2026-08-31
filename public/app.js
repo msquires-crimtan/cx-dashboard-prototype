@@ -77,8 +77,16 @@ const APPLY_EDIT_TOOL = {
   strict: true
 };
 
-let changeHistory = [];
-let undoCount = 0;
+// Chat/edit history is a shared, site-wide record (Supabase-backed) — every
+// logged-in user sees every turn from everyone, not just their own session.
+let sharedLog = [];
+let currentUserEmail = null;
+
+function senderName(email) {
+  if (!email) return "Shared login";
+  const local = email.split("@")[0].replace(/[._]+/g, " ");
+  return local.replace(/\b\w/g, c => c.toUpperCase());
+}
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 const gateEl    = document.getElementById("gate");
@@ -124,6 +132,7 @@ function showApp() {
   appEl.classList.add("on");
   txtEl.focus();
   statusEl.querySelector("span").textContent = "Setting up prototype…";
+  loadInitialChat();
   waitForPrototype().then(ready => {
     if (ready) loadPreview();
     else statusEl.querySelector("span").textContent = "Prototype unavailable — try refreshing.";
@@ -131,7 +140,7 @@ function showApp() {
 }
 
 fetch("/auth/check", { credentials: "same-origin" })
-  .then(r => r.json()).then(d => { if (d.authed) showApp(); }).catch(() => {});
+  .then(r => r.json()).then(d => { if (d.authed) { currentUserEmail = d.email || null; showApp(); } }).catch(() => {});
 
 function submitAuth() {
   const email = emailEl.value.trim();
@@ -151,6 +160,7 @@ function submitAuth() {
     .then(async res => {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Something went wrong.");
+      currentUserEmail = email || null;
       showApp();
     })
     .catch(err => {
@@ -170,17 +180,20 @@ logoutBtn.addEventListener("click", async () => {
   location.reload();
 });
 
-// Undo (topbar button = undo latest)
-undoBtn.addEventListener("click", () => rollbackTo(changeHistory.length - 2));
+// Undo (topbar button = roll back the most recent still-active change,
+// from anyone — the shared log, not a per-session stack)
+undoBtn.addEventListener("click", () => {
+  const latest = [...sharedLog].reverse().find(t => t.edit_count > 0 && !t.rolled_back);
+  if (latest) rollbackTurn(latest.id, undoBtn);
+});
 
-// Reset to published version
+// Reset to published version — this only re-checks-out the file from git;
+// the shared chat/edit history is a record of the site and isn't affected.
 resetBtn.addEventListener("click", async () => {
   if (!confirm("Reset the preview to the published version? This will undo all local changes.")) return;
   resetBtn.classList.add("spinning");
   try {
     await fetch("/prototype/refresh", { method: "POST", credentials: "same-origin" });
-    changeHistory = []; undoBtn.disabled = true;
-    renderHistory();
     loadPreview(true);
     addMsg("assistant", "✓ Preview reset to the published version.", null, true);
   } catch { addMsg("assistant", "Reset failed — try again.", null, true); }
@@ -209,43 +222,100 @@ function renderHistory() {
   const empty = document.getElementById("h-empty");
   const existing = historyView.querySelectorAll(".h-item");
   existing.forEach(e => e.remove());
-  if (changeHistory.length === 0) { empty.style.display = "block"; return; }
+  const entries = sharedLog.filter(t => t.edit_count > 0 || (t.user_message || "").startsWith("(reverted"));
+  if (entries.length === 0) { empty.style.display = "block"; return; }
   empty.style.display = "none";
-  [...changeHistory].reverse().forEach((item, i) => {
+  [...entries].reverse().forEach(turn => {
     const el = document.createElement("div");
-    el.className = "h-item";
-    // i=0 is most recent; only most recent can be undone via server undo
-    const isLatest = i === 0;
-    const targetIdx = changeHistory.length - 1 - i;
+    el.className = "h-item" + (turn.rolled_back ? " rolled-back" : "");
+    const time = new Date(turn.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
     el.innerHTML = `
       <div class="h-item-meta">
-        <span class="h-item-time">${item.time}</span>
-        <button class="h-undo-btn" title="${isLatest ? 'Undo this change' : 'Roll back to this point'}">
-          <i class="ti ti-arrow-back-up" style="font-size:10px"></i> ${isLatest ? 'Undo' : 'Roll back here'}
-        </button>
+        <span class="h-item-who">${esc(senderName(turn.email))}</span>
+        <span class="h-item-time">${time}</span>
       </div>
-      <div class="h-item-desc">${esc(item.desc)}</div>`;
-    el.querySelector(".h-undo-btn").addEventListener("click", () => rollbackTo(targetIdx));
+      <div class="h-item-desc">${esc(turn.assistant_summary || turn.user_message)}</div>`;
+    if (turn.edit_count > 0 && !turn.rolled_back) {
+      const btn = document.createElement("button");
+      btn.className = "h-undo-btn";
+      btn.innerHTML = '<i class="ti ti-arrow-back-up" style="font-size:10px"></i> Roll back here';
+      btn.addEventListener("click", () => rollbackTurn(turn.id, btn));
+      el.appendChild(btn);
+    }
     historyView.appendChild(el);
   });
 }
 
-async function rollbackTo(targetIdx) {
-  // targetIdx is the index in changeHistory we want to roll back to
-  // We need to undo (changeHistory.length - 1 - targetIdx) times
-  const stepsToUndo = changeHistory.length - 1 - targetIdx;
-  if (stepsToUndo <= 0) return;
-  if (!confirm("Roll back " + stepsToUndo + " change" + (stepsToUndo > 1 ? "s" : "") + "? This cannot be re-done.")) return;
-  for (let i = 0; i < stepsToUndo; i++) {
-    const res = await fetch("/prototype/undo", { method: "POST", credentials: "same-origin" });
-    const data = await res.json();
-    if (!data.ok) break;
-    changeHistory.pop();
-  }
-  undoBtn.disabled = changeHistory.length === 0;
+// Re-fetch the shared log (after sending a message or rolling back) and
+// refresh the History tab + Undo button state. Does NOT touch the chat feed
+// — that's only replayed once, at initial load, via loadInitialChat().
+async function refreshSharedLog() {
+  try {
+    const res = await fetch("/api/chat/log", { credentials: "same-origin" });
+    sharedLog = await res.json();
+    if (!Array.isArray(sharedLog)) sharedLog = [];
+  } catch { sharedLog = []; }
   renderHistory();
-  loadPreview(true);
-  addMsg("assistant", "↩ Rolled back " + stepsToUndo + " change" + (stepsToUndo > 1 ? "s" : "") + ".", null, true);
+  syncChatChipsWithLog();
+  undoBtn.disabled = !sharedLog.some(t => t.edit_count > 0 && !t.rolled_back);
+}
+
+// Rolling back a turn from the History tab (or the topbar Undo button) should
+// also update that turn's own chat bubble if it's already rendered, so a
+// stale "N changes applied" + still-clickable revert link doesn't linger.
+function syncChatChipsWithLog() {
+  sharedLog.filter(t => t.rolled_back).forEach(turn => {
+    const mi = msgsEl.querySelector(`[data-turn-id="${turn.id}"]`);
+    if (!mi) return;
+    const chip = mi.querySelector(".chip");
+    if (chip) { chip.className = "chip info"; chip.innerHTML = '<i class="ti ti-arrow-back-up" style="font-size:11px"></i>Reverted'; }
+    mi.querySelector(".revert-link")?.remove();
+  });
+}
+
+// Replay the full shared conversation into the chat feed — called once at
+// login, so every user sees the same thread regardless of who said what.
+async function loadInitialChat() {
+  await refreshSharedLog();
+  sharedLog.forEach(turn => {
+    if (!turn.user_message) return;
+    addMsg("user", esc(turn.user_message), null, false, senderName(turn.email));
+    const chips = [];
+    if (turn.edit_count > 0) {
+      chips.push(turn.rolled_back
+        ? { type: "info", icon: "arrow-back-up", label: "Reverted" }
+        : { type: "done", icon: "circle-check", label: `${turn.edit_count} change${turn.edit_count > 1 ? "s" : ""} applied` });
+    }
+    const assistantMi = addMsg("assistant", esc(turn.assistant_summary || ""), chips, false, "AI Editor");
+    if (turn.edit_count > 0 && !turn.rolled_back) addRevertLink(assistantMi, turn.id);
+  });
+}
+
+function addRevertLink(mi, turnId) {
+  mi.dataset.turnId = turnId;
+  const btn = document.createElement("button");
+  btn.className = "revert-link";
+  btn.innerHTML = '<i class="ti ti-arrow-back-up" style="font-size:10px"></i> Revert this change';
+  btn.addEventListener("click", () => rollbackTurn(turnId, btn));
+  mi.appendChild(btn);
+}
+
+async function rollbackTurn(turnId, btnEl) {
+  if (!confirm("Roll back to how the prototype looked right before this change? (This itself becomes a new entry you can revert.)")) return;
+  if (btnEl) btnEl.disabled = true;
+  try {
+    const res = await fetch(`/api/chat/turn/${turnId}/rollback`, { method: "POST", credentials: "same-origin" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Rollback failed.");
+    loadPreview(true);
+    setTimeout(flashPreview, 600);
+    await refreshSharedLog();
+    addMsg("assistant", "↩ Reverted to the state before that change.", null, true);
+  } catch (err) {
+    addMsg("assistant", `Revert failed: ${esc(err.message)}`, null, true);
+  } finally {
+    if (btnEl) btnEl.disabled = false;
+  }
 }
 
 // ── Preview ───────────────────────────────────────────────────────────────────
@@ -301,13 +371,19 @@ const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>
 const scroll = () => msgsEl.scrollTop = msgsEl.scrollHeight;
 const now = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-function addMsg(role, html, chips, system = false) {
+function addMsg(role, html, chips, system = false, sender = null) {
   const wrap = document.createElement("div");
   wrap.className = `msg ${system ? "assistant" : role} fi`;
   const av = document.createElement("div");
   av.className = `av ${role === "user" ? "user" : "ai"}`;
   av.innerHTML = system ? '<i class="ti ti-info-circle"></i>' : (role === "user" ? '<i class="ti ti-user"></i>' : '<i class="ti ti-plane-tilt"></i>');
   const mi = document.createElement("div"); mi.className = "mi";
+  if (sender) {
+    const senderEl = document.createElement("div");
+    senderEl.className = "msg-sender";
+    senderEl.textContent = sender;
+    mi.appendChild(senderEl);
+  }
   const bub = document.createElement("div"); bub.className = "bub";
   if (system) { bub.style.background = "var(--b50)"; bub.style.borderColor = "var(--b100)"; bub.style.color = "var(--b600)"; }
   bub.innerHTML = html;
@@ -395,26 +471,24 @@ function extractKeyword(msg) {
   return words[0] || msg.split(" ").slice(0, 3).join(" ");
 }
 
-// Apply edits to the local prototype file
-async function applyEdits(edits, commitMsg) {
-  const results = [];
-  for (let i = 0; i < edits.length; i++) {
-    const edit = edits[i];
-    const res = await fetch("/prototype/edit", {
-      method: "POST", headers: {"Content-Type":"application/json"},
-      credentials: "same-origin",
-      body: JSON.stringify({ find: edit.find, replace: edit.replace, message: commitMsg || "Update via CX Dashboard Editor" })
-    });
-    const data = await res.json();
-    results.push({ ok: res.ok, error: data.error, find: edit.find });
-  }
-  return results;
+// Apply all of this turn's edits atomically and log the turn to the shared,
+// site-wide history in one call (replaces the old per-edit /prototype/edit
+// loop — one write, one git commit, one history row per chat turn).
+async function applyTurn(userMessage, edits, summary) {
+  const res = await fetch("/api/chat/turn", {
+    method: "POST", headers: {"Content-Type":"application/json"},
+    credentials: "same-origin",
+    body: JSON.stringify({ user_message: userMessage, edits, summary })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Could not apply changes.");
+  return { results: data.results || [], turnId: data.turnId || null };
 }
 
 async function handleSend() {
   const text = txtEl.value.trim(); if (!text || busy) return;
   busy = true; sndEl.disabled = true; txtEl.value = ""; txtEl.style.height = "auto";
-  addMsg("user", esc(text));
+  addMsg("user", esc(text), null, false, senderName(currentUserEmail));
   addThinking("Reading prototype source…");
 
   try {
@@ -427,11 +501,11 @@ async function handleSend() {
 
     if (edits.length > 0) {
       const chipId = "chip-" + Date.now();
-      addMsg("assistant", esc(summary) || "Applying changes…", [
+      const assistantMi = addMsg("assistant", esc(summary) || "Applying changes…", [
         { type: "working", icon: "loader", label: `Applying ${edits.length} edit${edits.length > 1 ? "s" : ""}…`, id: chipId }
-      ]);
+      ], false, "AI Editor");
 
-      const results = await applyEdits(edits, (summary || text).substring(0, 100));
+      const { results, turnId } = await applyTurn(text, edits, summary);
       const failed = results.filter(r => !r.ok);
       const succeeded = results.filter(r => r.ok);
 
@@ -444,20 +518,21 @@ async function handleSend() {
           if (chip) { chip.className = "chip done"; chip.innerHTML = `<i class="ti ti-circle-check" style="font-size:11px"></i>${edits.length} change${edits.length > 1 ? "s" : ""} applied`; }
         }, 600);
 
-        // Update undo button + history
-        undoBtn.disabled = false;
-        undoCount++;
-        changeHistory.push({ time: now(), desc: summary || text });
-        renderHistory();
+        if (turnId) addRevertLink(assistantMi, turnId);
+        await refreshSharedLog();
       } else {
         const msg = failed.map(f => `${esc(f.error || "Edit failed")}: <code>${esc(f.find.substring(0, 60))}…</code>`).join("<br>");
         if (chip) { chip.className = "chip error"; chip.innerHTML = `<i class="ti ti-alert-circle" style="font-size:11px"></i>${failed.length} edit${failed.length > 1 ? "s" : ""} failed`; }
-        addMsg("assistant", `Some edits couldn't be applied — the text wasn't found in the prototype:<br>${msg}<br><br>Try rephrasing or being more specific about what to change.`, null, true);
-        if (succeeded.length > 0) { loadPreview(true); setTimeout(flashPreview, 600); }
+        addMsg("assistant", `Some edits couldn't be applied:<br>${msg}<br><br>Try rephrasing or being more specific about what to change.`, null, true);
+        if (succeeded.length > 0) {
+          loadPreview(true); setTimeout(flashPreview, 600);
+          if (turnId) addRevertLink(assistantMi, turnId);
+          await refreshSharedLog();
+        }
       }
     } else {
       // No edits — just a conversational response
-      addMsg("assistant", esc(summary || "I didn't make any changes — could you rephrase what you'd like updated?"));
+      addMsg("assistant", esc(summary || "I didn't make any changes — could you rephrase what you'd like updated?"), null, false, "AI Editor");
     }
   } catch (err) {
     if (err.message !== "session_expired") {
@@ -472,3 +547,41 @@ async function handleSend() {
 sndEl.addEventListener("click", handleSend);
 txtEl.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } });
 txtEl.addEventListener("input", () => { txtEl.style.height = "auto"; txtEl.style.height = Math.min(txtEl.scrollHeight, 120) + "px"; });
+
+// ── View code modal ───────────────────────────────────────────────────────────
+const codeBtn      = document.getElementById("code-btn");
+const codeModal     = document.getElementById("code-modal");
+const codeModalPre  = document.getElementById("code-modal-pre");
+const codeModalCopy = document.getElementById("code-modal-copy");
+
+[document.getElementById("code-modal-close"), document.getElementById("code-modal-close-2")].forEach(btn => {
+  btn.addEventListener("click", () => codeModal.classList.remove("open"));
+});
+
+codeBtn.addEventListener("click", async () => {
+  codeModal.classList.add("open");
+  codeModalPre.textContent = "Loading…";
+  try {
+    const res = await fetch("/prototype", { credentials: "same-origin" });
+    codeModalPre.textContent = await res.text();
+  } catch {
+    codeModalPre.textContent = "Failed to load source.";
+  }
+});
+
+codeModalCopy.addEventListener("click", () => {
+  navigator.clipboard.writeText(codeModalPre.textContent).then(() => {
+    const original = codeModalCopy.textContent;
+    codeModalCopy.textContent = "Copied!";
+    setTimeout(() => { codeModalCopy.textContent = original; }, 1200);
+  });
+});
+
+// ── Full-screen preview ───────────────────────────────────────────────────────
+const fullscreenBtn = document.getElementById("fullscreen-btn");
+fullscreenBtn.addEventListener("click", () => {
+  const isFullscreen = appEl.classList.toggle("preview-fullscreen");
+  fullscreenBtn.innerHTML = isFullscreen
+    ? '<i class="ti ti-arrows-minimize" style="font-size:12px"></i> Exit full screen'
+    : '<i class="ti ti-arrows-maximize" style="font-size:12px"></i> Full screen';
+});
