@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CX Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html,body{height:100%;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;}
+  #app{height:100vh;display:flex;flex-direction:column;}
+  #topbar{height:52px;flex-shrink:0;background:#38372f;border-bottom:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:12px;padding:0 18px;}
+  #topbar img{height:22px;width:auto;}
+  #company-name{font-size:13px;font-weight:500;color:#fff;flex:1;}
+  #signout-btn{
+    font-size:12px;font-weight:500;color:rgba(255,255,255,0.7);background:none;
+    border:0.5px solid rgba(255,255,255,0.2);border-radius:6px;padding:6px 12px;
+    cursor:pointer;font-family:'DM Sans',sans-serif;transition:color .15s,border-color .15s;
+  }
+  #signout-btn:hover{color:#fff;border-color:rgba(255,255,255,0.4);}
+  #preview-wrap{flex:1;position:relative;background:#EFEFEB;}
+  #preview-iframe{width:100%;height:100%;border:none;display:block;opacity:0;transition:opacity .3s;}
+  #preview-iframe.loaded{opacity:1;}
+  #preview-status{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;color:#AEADA6;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <img src="/crimtan-logo-white.png" alt="Crimtan">
+    <span id="company-name"></span>
+    <button id="signout-btn">Sign out</button>
+  </div>
+  <div id="preview-wrap">
+    <div id="preview-status">Loading…</div>
+    <iframe id="preview-iframe" src="" title="CX Dashboard"></iframe>
+  </div>
+</div>
+<script src="/client.js"></script>
+</body>
+</html>

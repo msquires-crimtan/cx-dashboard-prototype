@@ -293,6 +293,7 @@
     <div class="badge">Connected</div>
     <button class="icon-btn" id="undo-btn" title="Undo most recent change (any user)" disabled><i class="ti ti-arrow-back-up"></i></button>
     <button class="icon-btn" id="reset-btn" title="Reset to published version"><i class="ti ti-refresh"></i></button>
+    <button class="icon-btn" id="clients-btn" title="Manage client accounts"><i class="ti ti-users"></i></button>
     <button class="icon-btn" id="logout-btn" title="Sign out" style="width:auto;gap:5px;padding:0 9px;"><i class="ti ti-logout"></i><span style="font-size:12px;font-weight:500;">Sign out</span></button>
   </div>
   <div id="mobile-panel-toggle">
@@ -360,6 +361,7 @@
           <button class="device-btn" data-device="tablet" title="Tablet"><i class="ti ti-device-tablet"></i></button>
           <button class="device-btn" data-device="mobile" title="Mobile"><i class="ti ti-device-mobile"></i></button>
         </div>
+        <button class="pbar-btn" id="publish-btn" title="Push the current draft to the client-facing production view"><i class="ti ti-rocket" style="font-size:12px"></i> <span class="pbar-label">Publish</span></button>
         <button class="pbar-btn" id="share-btn"><i class="ti ti-share" style="font-size:12px"></i> <span class="pbar-label">Share</span></button>
         <button class="pbar-btn" id="code-btn"><i class="ti ti-code" style="font-size:12px"></i> <span class="pbar-label">View code</span></button>
         <button class="pbar-btn" id="fullscreen-btn"><i class="ti ti-arrows-maximize" style="font-size:12px"></i> <span class="pbar-label">Full screen</span></button>
@@ -420,6 +422,39 @@
       <div class="share-links-hdr">Active links</div>
       <div class="share-links-list" id="share-links-list">
         <div class="share-empty">No active share links.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Clients modal -->
+<div class="modal-overlay" id="clients-modal">
+  <div class="share-modal-card">
+    <div class="code-modal-hdr">
+      <span class="code-modal-title">👥 Client accounts</span>
+      <button class="icon-btn" id="clients-modal-close" title="Close"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="share-modal-body">
+      <div class="share-field">
+        <label>Company name</label>
+        <input type="text" id="client-company-name" placeholder="e.g. Cathay Pacific" style="width:100%;padding:8px 10px;border:0.5px solid var(--g200);border-radius:var(--rad-sm);font-size:13px;font-family:var(--sans);color:var(--g900);background:var(--g50);outline:none;">
+      </div>
+      <div class="share-field">
+        <label>Login email</label>
+        <input type="email" id="client-login-email" placeholder="the client's shared login email" style="width:100%;padding:8px 10px;border:0.5px solid var(--g200);border-radius:var(--rad-sm);font-size:13px;font-family:var(--sans);color:var(--g900);background:var(--g50);outline:none;">
+      </div>
+      <button class="btn-share-create" id="client-create-btn">Create client + send invite</button>
+      <div class="share-err" id="client-err"></div>
+      <div class="share-result" id="client-result">
+        <div style="font-size:12px;color:var(--g600);margin-bottom:6px;">Invite sent. Login page for this client:</div>
+        <div class="share-row">
+          <input type="text" id="client-url-output" readonly>
+          <button class="btn-modal-sm" id="client-copy-btn">Copy</button>
+        </div>
+      </div>
+      <div class="share-links-hdr">Existing clients</div>
+      <div class="share-links-list" id="clients-list">
+        <div class="share-empty">No clients yet.</div>
       </div>
     </div>
   </div>

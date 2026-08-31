@@ -12,7 +12,8 @@
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
     "helmet": "8.2.0",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "stytch": "^14.2.0"
   },
   "engines": {
     "node": ">=18"

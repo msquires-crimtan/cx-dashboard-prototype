@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import { execFileSync } from "child_process";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
+import { B2BClient } from "stytch";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -43,6 +44,14 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || "";
 const SCHEMA               = "cxdashboard";
 
 if (!SUPABASE_URL) console.warn("⚠  SUPABASE_URL not set");
+
+// ── Stytch (client-facing login + MFA) ────────────────────────────────────────
+const STYTCH_PROJECT_ID = process.env.STYTCH_PROJECT_ID || "";
+const STYTCH_SECRET     = process.env.STYTCH_SECRET     || "";
+const stytchClient = (STYTCH_PROJECT_ID && STYTCH_SECRET)
+  ? new B2BClient({ project_id: STYTCH_PROJECT_ID, secret: STYTCH_SECRET })
+  : null;
+if (!stytchClient) console.warn("⚠  STYTCH_PROJECT_ID/STYTCH_SECRET not set — client login disabled");
 
 async function supabase(table, { method = "GET", query = "", body = null, useServiceKey = false } = {}) {
   const url = `${SUPABASE_URL}/rest/v1/${table}${query ? "?" + query : ""}`;
@@ -122,10 +131,41 @@ function setSessionCookie(res, email) {
 const loginLimit    = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
 const registerLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
 const apiLimit       = rateLimit({ windowMs: 60 * 1000, max: 30 });
+const clientLoginLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
 
 function requireAuth(req, res, next) {
   if (isAuthed(req)) return next();
   res.status(401).json({ error: "Not authenticated." });
+}
+
+// ── Client (Stytch-backed) session cookie ─────────────────────────────────────
+// Separate from the internal @crimtan.com session above. Password + MFA are
+// verified once against Stytch; from then on we carry our own signed cookie,
+// same pattern as the internal session, scoped to a single client's slug.
+const CLIENT_COOKIE_NAME   = "cx_client_sess";
+const CLIENT_COOKIE_TTL_MS = 8 * 60 * 60 * 1000;
+
+function setClientSessionCookie(res, slug, memberId) {
+  const token = signToken({ type: "client", slug, memberId, exp: Date.now() + CLIENT_COOKIE_TTL_MS });
+  const flags = [`${CLIENT_COOKIE_NAME}=${encodeURIComponent(token)}`, "HttpOnly", "SameSite=Lax", `Max-Age=${CLIENT_COOKIE_TTL_MS / 1000}`, "Path=/"];
+  if (IS_PROD) flags.push("Secure");
+  res.setHeader("Set-Cookie", flags.join("; "));
+}
+function currentClientSession(req) {
+  const payload = verifyToken(parseCookies(req)[CLIENT_COOKIE_NAME]);
+  return payload && payload.type === "client" ? payload : null;
+}
+function requireClientAuth(req, res, next) {
+  const session = currentClientSession(req);
+  if (!session || session.slug !== req.params.slug) return res.status(401).json({ error: "Not authenticated." });
+  next();
+}
+async function getClientBySlug(slug) {
+  const { status, data } = await supabase("clients", {
+    query: `slug=eq.${encodeURIComponent(slug)}&select=id,company_name,slug,login_email,stytch_organization_id,active`,
+    useServiceKey: true,
+  });
+  return status === 200 && Array.isArray(data) ? (data[0] || null) : null;
 }
 
 // ── Auth routes ───────────────────────────────────────────────────────────────
@@ -266,6 +306,26 @@ function sendPrototypeHtml(res) {
   // hundreds of handlers in AI-editable markup.
   res.removeHeader("Content-Security-Policy");
   res.send(fs.readFileSync(PROTO_PATH, "utf-8"));
+}
+
+// The published snapshot clients see — a deliberate copy of PROTO_PATH, only
+// updated when a colleague clicks Publish, so live AI-editing sessions never
+// reach client logins mid-change.
+const PUBLISHED_FILE = "prototype/production.html";
+const PUBLISHED_PATH = path.join(REPO_DIR, PUBLISHED_FILE);
+
+function sendProductionHtml(res) {
+  if (!fs.existsSync(PUBLISHED_PATH)) {
+    return res.status(503).send(
+      "<html><body style='font-family:sans-serif;padding:60px;text-align:center;color:#666'>" +
+      "<h2>Nothing published yet</h2><p>Ask your Crimtan contact to publish the latest version.</p></body></html>"
+    );
+  }
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("Cache-Control", "no-store");
+  res.removeHeader("Content-Security-Policy");
+  res.send(fs.readFileSync(PUBLISHED_PATH, "utf-8"));
 }
 
 // ── Prototype routes ──────────────────────────────────────────────────────────
@@ -487,6 +547,290 @@ app.get("/share/:token", async (req, res) => {
   } catch (err) {
     res.status(502).send("Could not load this preview — please try again.");
   }
+});
+
+// ── Publish (draft → production) ───────────────────────────────────────────────
+// Colleagues edit the draft freely via Compass AI; client logins only ever see
+// this separately-committed snapshot, taken deliberately via this button.
+app.post("/api/publish", requireAuth, async (req, res) => {
+  try {
+    await ensureRepo();
+    fs.writeFileSync(PUBLISHED_PATH, fs.readFileSync(PROTO_PATH, "utf-8"), "utf-8");
+    git("add", PUBLISHED_FILE);
+    try { git("commit", "-m", `Publish to production (${currentEmail(req) || "unknown"})`); } catch { /* nothing changed since last publish */ }
+    const repoUrl = `https://${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git`;
+    git("push", repoUrl, GITHUB_BRANCH);
+    await supabase("publish_log", { method: "POST", body: { published_by: currentEmail(req) }, useServiceKey: true });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("publish failed:", err.message);
+    res.status(502).json({ error: "Publish failed — please try again." });
+  }
+});
+
+app.get("/api/publish/status", requireAuth, async (req, res) => {
+  try {
+    const { status, data } = await supabase("publish_log", {
+      query: "select=published_by,created_at&order=created_at.desc&limit=1",
+      useServiceKey: true,
+    });
+    const last = status === 200 && Array.isArray(data) ? data[0] || null : null;
+    res.json({ published: fs.existsSync(PUBLISHED_PATH), last });
+  } catch (err) {
+    res.status(502).json({ error: "Could not load publish status." });
+  }
+});
+
+// ── Client accounts (admin) ────────────────────────────────────────────────────
+// One Stytch B2B Organization per client company, one shared Member/login per
+// Organization, MFA required. Admin actions here are gated by the existing
+// @crimtan.com colleague auth (requireAuth) — not a separate permission tier.
+app.get("/api/admin/clients", requireAuth, async (req, res) => {
+  try {
+    const { status, data } = await supabase("clients", {
+      query: "select=id,company_name,slug,login_email,active,created_by,created_at&order=created_at.desc",
+      useServiceKey: true,
+    });
+    res.status(status).json(data);
+  } catch (err) {
+    res.status(502).json({ error: "Could not load clients." });
+  }
+});
+
+app.post("/api/admin/clients", requireAuth, async (req, res) => {
+  if (!stytchClient) return res.status(503).json({ error: "Stytch is not configured on this server." });
+  const company_name = (req.body?.company_name || "").trim();
+  const login_email  = (req.body?.login_email || "").trim().toLowerCase();
+  let slug = (req.body?.slug || "").trim().toLowerCase();
+  if (!company_name) return res.status(400).json({ error: "Company name required." });
+  if (!slug) slug = company_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-+|-+$)/g, "");
+  if (!/^[a-z0-9-]{2,64}$/.test(slug)) return res.status(400).json({ error: "Slug must be 2-64 lowercase letters, numbers or hyphens." });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(login_email)) return res.status(400).json({ error: "A valid login email is required." });
+
+  try {
+    const existing = await supabase("clients", { query: `slug=eq.${encodeURIComponent(slug)}&select=id`, useServiceKey: true });
+    if (Array.isArray(existing.data) && existing.data.length > 0) {
+      return res.status(409).json({ error: "A client with that slug already exists." });
+    }
+
+    const org = await stytchClient.organizations.create({
+      organization_name: company_name,
+      // Stytch org slugs are unique project-wide; ours only need to be unique in
+      // our own table, so disambiguate with a short random suffix.
+      organization_slug: `cx-${slug}-${crypto.randomBytes(3).toString("hex")}`,
+      mfa_policy: "REQUIRED_FOR_ALL",
+      email_invites: "ALL_ALLOWED",
+      email_jit_provisioning: "NOT_ALLOWED",
+    });
+
+    const origin = `${req.protocol}://${req.get("host")}`;
+    await stytchClient.passwords.email.resetStart({
+      organization_id: org.organization.organization_id,
+      email_address: login_email,
+      reset_password_redirect_url: `${origin}/client/${slug}/set-password`,
+    });
+
+    const inserted = await supabase("clients", {
+      method: "POST",
+      body: { company_name, slug, login_email, stytch_organization_id: org.organization.organization_id, created_by: currentEmail(req) },
+      useServiceKey: true,
+    });
+    if (inserted.status >= 300) throw new Error("insert failed");
+
+    res.json({ ok: true, slug, loginUrl: `${origin}/client/${slug}/login` });
+  } catch (err) {
+    console.error("admin/clients create failed:", err.message);
+    res.status(502).json({ error: "Could not create client — please try again." });
+  }
+});
+
+app.post("/api/admin/clients/:id/resend-invite", requireAuth, async (req, res) => {
+  if (!stytchClient) return res.status(503).json({ error: "Stytch is not configured on this server." });
+  try {
+    const { status, data } = await supabase("clients", { query: `id=eq.${encodeURIComponent(req.params.id)}&select=*`, useServiceKey: true });
+    const client = status === 200 && Array.isArray(data) ? data[0] : null;
+    if (!client) return res.status(404).json({ error: "Client not found." });
+    const origin = `${req.protocol}://${req.get("host")}`;
+    await stytchClient.passwords.email.resetStart({
+      organization_id: client.stytch_organization_id,
+      email_address: client.login_email,
+      reset_password_redirect_url: `${origin}/client/${client.slug}/set-password`,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(502).json({ error: "Could not resend invite." });
+  }
+});
+
+app.post("/api/admin/clients/:id/deactivate", requireAuth, async (req, res) => {
+  try {
+    const { status } = await supabase("clients", {
+      method: "PATCH",
+      query: `id=eq.${encodeURIComponent(req.params.id)}`,
+      body: { active: false },
+      useServiceKey: true,
+    });
+    if (status >= 300) throw new Error("update failed");
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(502).json({ error: "Could not deactivate client." });
+  }
+});
+
+// ── Client accounts (client-facing) ────────────────────────────────────────────
+app.get("/client/:slug/login", async (req, res) => {
+  try {
+    const client = await getClientBySlug(req.params.slug);
+    if (!client || !client.active) return res.status(404).send("Unknown client.");
+    res.sendFile(path.join(__dirname, "public", "client-login.html"));
+  } catch (err) {
+    res.status(502).send("Could not load this page — please try again.");
+  }
+});
+
+app.get("/client/:slug/set-password", async (req, res) => {
+  try {
+    const client = await getClientBySlug(req.params.slug);
+    if (!client || !client.active) return res.status(404).send("Unknown client.");
+    res.sendFile(path.join(__dirname, "public", "client-set-password.html"));
+  } catch (err) {
+    res.status(502).send("Could not load this page — please try again.");
+  }
+});
+
+app.get("/client/:slug", async (req, res) => {
+  try {
+    const client = await getClientBySlug(req.params.slug);
+    if (!client || !client.active) return res.status(404).send("Unknown client.");
+    const session = currentClientSession(req);
+    if (!session || session.slug !== client.slug) return res.redirect(`/client/${client.slug}/login`);
+    res.sendFile(path.join(__dirname, "public", "client.html"));
+  } catch (err) {
+    res.status(502).send("Could not load this page — please try again.");
+  }
+});
+
+app.get("/client/:slug/info", requireClientAuth, async (req, res) => {
+  try {
+    const client = await getClientBySlug(req.params.slug);
+    if (!client) return res.status(404).json({ error: "Unknown client." });
+    res.json({ companyName: client.company_name });
+  } catch (err) {
+    res.status(502).json({ error: "Could not load client info." });
+  }
+});
+
+app.get("/client/:slug/preview", requireClientAuth, async (req, res) => {
+  try {
+    const client = await getClientBySlug(req.params.slug);
+    if (!client) return res.status(404).send("Unknown client.");
+    await ensureRepo();
+    sendProductionHtml(res);
+  } catch (err) {
+    res.status(502).send("Could not load this preview — please try again.");
+  }
+});
+
+app.post("/client/:slug/auth/password", clientLoginLimit, async (req, res) => {
+  if (!stytchClient) return res.status(503).json({ error: "Client login is not configured." });
+  let client;
+  try { client = await getClientBySlug(req.params.slug); }
+  catch { return res.status(502).json({ error: "Could not verify this client — please try again." }); }
+  if (!client || !client.active) return res.status(404).json({ error: "Unknown client." });
+  const email = (req.body?.email || "").trim().toLowerCase();
+  const { password } = req.body || {};
+  if (!email || !password) return res.status(400).json({ error: "Email and password required." });
+
+  try {
+    const result = await stytchClient.passwords.authenticate({
+      organization_id: client.stytch_organization_id,
+      email_address: email,
+      password,
+    });
+    if (result.member_authenticated) {
+      setClientSessionCookie(res, client.slug, result.member_id);
+      return res.json({ ok: true });
+    }
+    if (result.member.totp_registration_id) {
+      return res.json({ mfa: "challenge", intermediateToken: result.intermediate_session_token, memberId: result.member_id });
+    }
+    const enroll = await stytchClient.totps.create({
+      organization_id: client.stytch_organization_id,
+      member_id: result.member_id,
+      intermediate_session_token: result.intermediate_session_token,
+    });
+    res.json({ mfa: "enroll", intermediateToken: result.intermediate_session_token, memberId: result.member_id, qrCode: enroll.qr_code, secret: enroll.secret });
+  } catch (err) {
+    res.status(401).json({ error: "Incorrect email or password." });
+  }
+});
+
+app.post("/client/:slug/set-password", clientLoginLimit, async (req, res) => {
+  if (!stytchClient) return res.status(503).json({ error: "Client login is not configured." });
+  let client;
+  try { client = await getClientBySlug(req.params.slug); }
+  catch { return res.status(502).json({ error: "Could not verify this client — please try again." }); }
+  if (!client || !client.active) return res.status(404).json({ error: "Unknown client." });
+  const { token, password } = req.body || {};
+  if (!token || !password) return res.status(400).json({ error: "Missing token or password." });
+  if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters." });
+
+  try {
+    const result = await stytchClient.passwords.email.reset({ password_reset_token: token, password });
+    if (result.member_authenticated) {
+      setClientSessionCookie(res, client.slug, result.member_id);
+      return res.json({ ok: true, done: true });
+    }
+    if (result.member.totp_registration_id) {
+      return res.json({ mfa: "challenge", intermediateToken: result.intermediate_session_token, memberId: result.member_id });
+    }
+    const enroll = await stytchClient.totps.create({
+      organization_id: client.stytch_organization_id,
+      member_id: result.member_id,
+      intermediate_session_token: result.intermediate_session_token,
+    });
+    res.json({ mfa: "enroll", intermediateToken: result.intermediate_session_token, memberId: result.member_id, qrCode: enroll.qr_code, secret: enroll.secret });
+  } catch (err) {
+    res.status(401).json({ error: "This link is invalid or has expired — ask for a new invite." });
+  }
+});
+
+// Shared by both the login MFA challenge and the first-time set-password
+// enrollment step — either way, the client is finishing an MFA step started
+// by an intermediate_session_token from one of the two routes above.
+app.post("/client/:slug/auth/totp", clientLoginLimit, async (req, res) => {
+  if (!stytchClient) return res.status(503).json({ error: "Client login is not configured." });
+  let client;
+  try { client = await getClientBySlug(req.params.slug); }
+  catch { return res.status(502).json({ error: "Could not verify this client — please try again." }); }
+  if (!client) return res.status(404).json({ error: "Unknown client." });
+  const { code, intermediateToken, memberId } = req.body || {};
+  if (!code || !intermediateToken || !memberId) return res.status(400).json({ error: "Missing verification code." });
+
+  try {
+    const result = await stytchClient.totps.authenticate({
+      organization_id: client.stytch_organization_id,
+      member_id: memberId,
+      code,
+      intermediate_session_token: intermediateToken,
+      set_default_mfa: true,
+    });
+    if (!result.member_id) throw new Error("not authenticated");
+    setClientSessionCookie(res, client.slug, memberId);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(401).json({ error: "Incorrect or expired code — please try again." });
+  }
+});
+
+app.post("/client/:slug/auth/logout", (req, res) => {
+  res.setHeader("Set-Cookie", `${CLIENT_COOKIE_NAME}=; HttpOnly; Max-Age=0; Path=/`);
+  res.json({ ok: true });
+});
+
+app.get("/client/:slug/auth/check", (req, res) => {
+  const session = currentClientSession(req);
+  res.json({ authed: !!(session && session.slug === req.params.slug) });
 });
 
 // ── Anthropic proxy ───────────────────────────────────────────────────────────

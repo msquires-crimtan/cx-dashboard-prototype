@@ -402,6 +402,26 @@ refreshBtn.addEventListener("click", async () => {
   setTimeout(() => refreshBtn.classList.remove("spinning"), 1500);
 });
 
+// ── Publish (draft → production) ────────────────────────────────────────────────
+const publishBtn = document.getElementById("publish-btn");
+publishBtn.addEventListener("click", async () => {
+  if (!confirm("Publish the current draft? Client logins will immediately see this version.")) return;
+  const original = publishBtn.innerHTML;
+  publishBtn.disabled = true;
+  publishBtn.innerHTML = '<i class="ti ti-loader spinning" style="font-size:12px"></i> <span class="pbar-label">Publishing…</span>';
+  try {
+    const res = await fetch("/api/publish", { method: "POST", credentials: "same-origin" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || "Publish failed");
+    publishBtn.innerHTML = '<i class="ti ti-check" style="font-size:12px"></i> <span class="pbar-label">Published</span>';
+    setTimeout(() => { publishBtn.innerHTML = original; publishBtn.disabled = false; }, 1800);
+  } catch (err) {
+    alert(err.message || "Publish failed — please try again.");
+    publishBtn.innerHTML = original;
+    publishBtn.disabled = false;
+  }
+});
+
 // ── Chat ──────────────────────────────────────────────────────────────────────
 const msgsEl = document.getElementById("msgs");
 const txtEl  = document.getElementById("txt");
@@ -728,6 +748,123 @@ shareCopyBtn.addEventListener("click", () => {
     const original = shareCopyBtn.textContent;
     shareCopyBtn.textContent = "Copied!";
     setTimeout(() => { shareCopyBtn.textContent = original; }, 1200);
+  });
+});
+
+// ── Client accounts modal ───────────────────────────────────────────────────────
+const clientsBtn        = document.getElementById("clients-btn");
+const clientsModal      = document.getElementById("clients-modal");
+const clientCompanyName = document.getElementById("client-company-name");
+const clientLoginEmail  = document.getElementById("client-login-email");
+const clientCreateBtn   = document.getElementById("client-create-btn");
+const clientErrEl       = document.getElementById("client-err");
+const clientResultEl    = document.getElementById("client-result");
+const clientUrlOutput   = document.getElementById("client-url-output");
+const clientCopyBtn     = document.getElementById("client-copy-btn");
+const clientsListEl     = document.getElementById("clients-list");
+
+document.getElementById("clients-modal-close").addEventListener("click", () => clientsModal.classList.remove("open"));
+
+async function refreshClientsList() {
+  clientsListEl.innerHTML = '<div class="share-empty">Loading…</div>';
+  try {
+    const res = await fetch("/api/admin/clients", { credentials: "same-origin" });
+    const clients = await res.json();
+    if (!res.ok || !Array.isArray(clients) || clients.length === 0) {
+      clientsListEl.innerHTML = '<div class="share-empty">No clients yet.</div>';
+      return;
+    }
+    clientsListEl.innerHTML = "";
+    clients.forEach(client => {
+      const row = document.createElement("div");
+      row.className = "share-link-item";
+      const meta = document.createElement("span");
+      meta.className = "share-link-meta";
+      meta.textContent = `${client.company_name} · ${client.login_email}${client.active ? "" : " · deactivated"}`;
+      const actions = document.createElement("div");
+      actions.className = "share-link-actions";
+      const copyBtn = document.createElement("button");
+      copyBtn.className = "icon-btn";
+      copyBtn.style.color = "var(--g600)";
+      copyBtn.title = "Copy login link";
+      copyBtn.innerHTML = '<i class="ti ti-copy"></i>';
+      copyBtn.addEventListener("click", () => navigator.clipboard.writeText(`${location.origin}/client/${client.slug}/login`));
+      const resendBtn = document.createElement("button");
+      resendBtn.className = "icon-btn";
+      resendBtn.style.color = "var(--g600)";
+      resendBtn.title = "Resend invite";
+      resendBtn.innerHTML = '<i class="ti ti-mail-forward"></i>';
+      resendBtn.addEventListener("click", async () => {
+        resendBtn.disabled = true;
+        try {
+          await fetch(`/api/admin/clients/${client.id}/resend-invite`, { method: "POST", credentials: "same-origin" });
+        } catch {}
+        resendBtn.disabled = false;
+      });
+      actions.append(copyBtn, resendBtn);
+      if (client.active) {
+        const deactivateBtn = document.createElement("button");
+        deactivateBtn.className = "icon-btn";
+        deactivateBtn.style.color = "var(--r600)";
+        deactivateBtn.title = "Deactivate";
+        deactivateBtn.innerHTML = '<i class="ti ti-user-off"></i>';
+        deactivateBtn.addEventListener("click", async () => {
+          if (!confirm(`Deactivate ${client.company_name}'s access?`)) return;
+          deactivateBtn.disabled = true;
+          try {
+            await fetch(`/api/admin/clients/${client.id}/deactivate`, { method: "POST", credentials: "same-origin" });
+          } catch {}
+          refreshClientsList();
+        });
+        actions.append(deactivateBtn);
+      }
+      row.append(meta, actions);
+      clientsListEl.appendChild(row);
+    });
+  } catch {
+    clientsListEl.innerHTML = '<div class="share-empty">Could not load clients.</div>';
+  }
+}
+
+clientsBtn.addEventListener("click", () => {
+  clientsModal.classList.add("open");
+  clientErrEl.style.display = "none";
+  clientResultEl.classList.remove("show");
+  refreshClientsList();
+});
+
+clientCreateBtn.addEventListener("click", async () => {
+  clientErrEl.style.display = "none";
+  clientCreateBtn.disabled = true;
+  clientCreateBtn.textContent = "Creating…";
+  try {
+    const res = await fetch("/api/admin/clients", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ company_name: clientCompanyName.value.trim(), login_email: clientLoginEmail.value.trim() }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || "Failed to create client");
+    clientUrlOutput.value = data.loginUrl;
+    clientResultEl.classList.add("show");
+    clientCompanyName.value = "";
+    clientLoginEmail.value = "";
+    refreshClientsList();
+  } catch (err) {
+    clientErrEl.textContent = err.message || "Could not create client.";
+    clientErrEl.style.display = "block";
+  } finally {
+    clientCreateBtn.disabled = false;
+    clientCreateBtn.textContent = "Create client + send invite";
+  }
+});
+
+clientCopyBtn.addEventListener("click", () => {
+  navigator.clipboard.writeText(clientUrlOutput.value).then(() => {
+    const original = clientCopyBtn.textContent;
+    clientCopyBtn.textContent = "Copied!";
+    setTimeout(() => { clientCopyBtn.textContent = original; }, 1200);
   });
 });
 
