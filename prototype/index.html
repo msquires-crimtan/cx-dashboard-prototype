@@ -944,8 +944,28 @@ document.addEventListener('click', e => {
 });
 
 // ── BADGE HELPERS ──
-const BC={Live:'b-live',WIP:'b-wip',Paused:'b-paused',Inactive:'b-inactive',Draft:'b-draft'};
-const DC={Live:'d-live',WIP:'d-wip',Paused:'d-paused',Inactive:'d-inactive',Draft:'d-draft'};
+const BC={Live:'b-live',WIP:'b-wip',Paused:'b-paused',Inactive:'b-inactive',Draft:'b-draft',Active:'b-live'};
+const DC={Live:'d-live',WIP:'d-wip',Paused:'d-paused',Inactive:'d-inactive',Draft:'d-draft',Active:'d-live'};
+const STATUS_OPTIONS = ['Active','Paused','Inactive'];
+function updateStatusField(rowId, newVal, selectEl) {
+  const row = ALL_ROWS.find(r => r._rowId === rowId);
+  if (!row) return;
+  const oldVal = row.status;
+  if (oldVal === newVal) return;
+  row.status = newVal;
+  editHistory.push({
+    ts: new Date().toISOString(),
+    sheet: row.sheet,
+    row: rowId,
+    field: 'status',
+    oldVal: oldVal,
+    newVal: newVal
+  });
+  if (selectEl) {
+    selectEl.className = 'status-dd ' + (BC[newVal] || 'b-draft');
+  }
+  render();
+}
 
 function renderImagesContent(imgStr) {
   if (!imgStr) return '<span style="color:var(--text3);font-size:11px">—</span>';
@@ -1453,7 +1473,7 @@ function render() {
       <td style="padding:4px 6px">
         <button class="expand-btn${isExpanded?' open':''}" id="exp-btn-${r._rowId}" onclick="toggleExpand('${safeId}')" title="Show details">${isExpanded?'›':'›'}</button>
       </td>
-      <td><span class="badge ${BC[r.status]||'b-draft'}"><span class="dot ${DC[r.status]||'d-draft'}"></span>${r.status}</span></td>
+      <td><select class="status-dd ${BC[r.status]||'b-draft'}" style="border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:11px;font-weight:600;padding:2px 6px;cursor:pointer" onclick="event.stopPropagation()" onchange="updateStatusField('${safeId}', this.value, this)">${STATUS_OPTIONS.map(s=>`<option value="${s}"${r.status===s?' selected':''}>${s}</option>`).join('')}${STATUS_OPTIONS.includes(r.status)?'':`<option value="${r.status}" selected>${r.status}</option>`}</select></td>
       ${cpTd}${ctTd}
       ${activeSheet==='All'?`<td><span class="pill-sheet">${r.sheet}</span></td>`:''}
       <td style="color:var(--text);font-weight:500;font-size:11px;white-space:nowrap">${r.season}</td>
