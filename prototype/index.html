@@ -1158,7 +1158,7 @@ function openCopyModal(rowId) {
     <div class="mfield"><label>Status</label><select id="cm-status">${opt(allStatuses, r.status)}</select></div>
     <div class="mfield"><label>Season</label><select id="cm-season">${opt(FIXED_SEASONS, r.season)}</select></div>
     <div class="mfield"><label>Market</label><select id="cm-market">${opt(allMarkets, r.market)}</select></div>
-    <div class="mfield"><label>Destination</label><select id="cm-dest">${opt(allDests, o.destination||r.destination)}</select></div>
+    <div class="mfield"><label>Destination</label><input type="text" id="cm-dest" list="cm-dest-list" placeholder="Select or type a new destination…" value="${(o.destination||r.destination||'').replace(/"/g,'&quot;')}"><datalist id="cm-dest-list">${allDests.map(v=>`<option value="${v.replace(/"/g,'&quot;')}">`).join('')}</datalist><div class="mfield-note">Pick an existing destination or type a new one</div></div>
     <div class="mfield"><label>Cities</label><textarea id="cm-cities" placeholder="One city per line">${curCities}</textarea><div class="mfield-note">One city per line</div></div>
     <div class="mfield"><label>Language</label><select id="cm-lang">${opt(FIXED_LANGS, r.language)}</select></div>
     <div class="mfield"><label>Preferred Images <span style="color:var(--text3);font-weight:400">(optional)</span></label><textarea id="cm-images" placeholder="Paste image links or names…"></textarea></div>
