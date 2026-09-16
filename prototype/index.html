@@ -683,6 +683,95 @@ function getRow(r) {
   return {...r, frames:o.frames, preview:o.preview};
 }
 
+// ── PERSISTENCE ──
+// Every edit below applies to in-memory state immediately (same as before,
+// so the UI stays instant) and also fires one of these in the background to
+// persist it. Failures are logged but don't block the UI — the in-memory
+// state is still correct for this session even if a write briefly fails.
+function apiPatchCreative(rowId, fields) {
+  fetch(`/api/creatives/${encodeURIComponent(rowId)}`, {
+    method: 'PATCH', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+    body: JSON.stringify(fields)
+  }).catch(e => console.error('Persist failed (creative):', e));
+}
+function apiPutOverride(rowId, fields) {
+  fetch(`/api/overrides/${encodeURIComponent(rowId)}`, {
+    method: 'PUT', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+    body: JSON.stringify(fields)
+  }).catch(e => console.error('Persist failed (override):', e));
+}
+function apiSeedCreative(row) {
+  fetch('/api/creatives/seed', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+    body: JSON.stringify({ rows: [row] })
+  }).catch(e => console.error('Persist failed (new row):', e));
+}
+function apiDeleteCreative(rowId) {
+  fetch(`/api/creatives/${encodeURIComponent(rowId)}`, { method: 'DELETE', credentials: 'same-origin' })
+    .catch(e => console.error('Persist failed (delete):', e));
+}
+function apiLogEdit(rowId, sheet, field, oldVal, newVal) {
+  fetch('/api/edit_history', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+    body: JSON.stringify({ row_id: rowId, sheet, field, old_val: String(oldVal||''), new_val: String(newVal||'') })
+  }).catch(e => console.error('Persist failed (history):', e));
+}
+
+// Pulls the live database state on top of the embedded snapshot above, so
+// edits anyone has made (on this device or another) are what's actually
+// shown, not just whatever was baked into this HTML file at last publish.
+async function loadFromServer() {
+  try {
+    const [creativesRes, overridesRes] = await Promise.all([
+      fetch('/api/creatives', { credentials: 'same-origin' }),
+      fetch('/api/overrides', { credentials: 'same-origin' }),
+    ]);
+    const dbCreatives = await creativesRes.json();
+    const dbOverrides = await overridesRes.json();
+    if (!Array.isArray(dbCreatives) || !Array.isArray(dbOverrides)) return;
+
+    const byId = new Map(ALL_ROWS.map(r => [r._rowId, r]));
+    dbCreatives.forEach(dbRow => {
+      const rid = dbRow.row_id;
+      let row = byId.get(rid);
+      if (!row) {
+        // Created on another device/session since this file was last published.
+        row = { sheet: dbRow.sheet, _rowId: rid, frames: ['','','','',''] };
+        ALL_ROWS.push(row);
+        byId.set(rid, row);
+        overrides[rid] = { frames:['','','','','',''], preview:'', images:'', destination:'', cities:'', cp:'active', crimtan:'in progress', format:'Standard Carousel', feedback:'' };
+      }
+      if (dbRow.status != null) row.status = dbRow.status;
+      if (dbRow.season != null) row.season = dbRow.season;
+      if (dbRow.market != null) row.market = dbRow.market;
+      if (dbRow.destination != null) row.destination = dbRow.destination;
+      if (dbRow.cities != null) row.cities = dbRow.cities;
+      if (dbRow.language != null) row.language = dbRow.language;
+    });
+
+    dbOverrides.forEach(o => {
+      const rid = o.row_id;
+      if (!overrides[rid]) overrides[rid] = { frames:['','','','','',''], preview:'', images:'', destination:'', cities:'', cp:'active', crimtan:'in progress', format:'Standard Carousel', feedback:'' };
+      const ov = overrides[rid];
+      if (o.frames && o.frames.length) ov.frames = o.frames;
+      if (o.preview_url != null) ov.preview = o.preview_url;
+      if (o.images != null) ov.images = o.images;
+      if (o.destination != null) ov.destination = o.destination;
+      if (o.cities != null) ov.cities = o.cities;
+      if (o.cp_status != null) ov.cp = o.cp_status;
+      if (o.crimtan_status != null) ov.crimtan = o.crimtan_status;
+      if (o.format != null) ov.format = o.format;
+      if (o.feedback != null) ov.feedback = o.feedback;
+    });
+
+    populateSels();
+    updateFrameDropdown();
+    render();
+  } catch (e) {
+    console.error('Could not load live data — showing the embedded snapshot instead:', e);
+  }
+}
+
 // ── REAL FRAME NAMES PER SHEET ──
 const FRAME_NAMES = {
   'EUR':   ['ENG Ad copy Frame 1','ENG Ad copy Frame 2','ENG Ad copy Frame 3','ENG Ad copy Frame 4','ENG Ad copy Frame 5'],
@@ -808,11 +897,16 @@ function toggleHistory() {
 }
 
 // ── INLINE DROPDOWN SAVE ──
+const OVERRIDE_DB_FIELD = { cp: 'cp_status', crimtan: 'crimtan_status', format: 'format' };
 function saveInlineDD(rowId, field, val, label) {
   const old = overrides[rowId][field]||'';
   overrides[rowId][field] = val;
   const r = ALL_ROWS.find(x=>x._rowId===rowId);
-  if (r && val !== old) logEdit(r.sheet, `${r.market}/${r.destination}`, label, old, val);
+  if (r && val !== old) {
+    logEdit(r.sheet, `${r.market}/${r.destination}`, label, old, val);
+    apiPutOverride(rowId, { [OVERRIDE_DB_FIELD[field]||field]: val });
+    apiLogEdit(rowId, r.sheet, label, old, val);
+  }
 }
 
 // ── FRAME EDITING ──
@@ -849,8 +943,17 @@ function saveFrame(el, rowId, frameIdx, sheet, rowInfo) {
   el.onblur = null;
   el.contentEditable = 'false';
   if (newVal !== oldVal) {
-    if (field) { overrides[rowId][field] = newVal; logEdit(sheet, rowInfo, 'Feedback', oldVal, newVal); }
-    else { overrides[rowId].frames[frameIdx] = newVal; logEdit(sheet, rowInfo, `Frame ${frameIdx+1}`, oldVal, newVal); }
+    if (field) {
+      overrides[rowId][field] = newVal;
+      logEdit(sheet, rowInfo, 'Feedback', oldVal, newVal);
+      apiPutOverride(rowId, { feedback: newVal });
+      apiLogEdit(rowId, sheet, 'Feedback', oldVal, newVal);
+    } else {
+      overrides[rowId].frames[frameIdx] = newVal;
+      logEdit(sheet, rowInfo, `Frame ${frameIdx+1}`, oldVal, newVal);
+      apiPutOverride(rowId, { frames: overrides[rowId].frames });
+      apiLogEdit(rowId, sheet, `Frame ${frameIdx+1}`, oldVal, newVal);
+    }
   }
 }
 
@@ -919,7 +1022,11 @@ function savePreviewDialog() {
   const {rowId, sheet, rowInfo} = currentPreviewCell;
   const oldVal = overrides[rowId].preview || '';
   overrides[rowId].preview = newVal;
-  if (newVal !== oldVal) logEdit(sheet, rowInfo, 'Preview link', oldVal, newVal);
+  if (newVal !== oldVal) {
+    logEdit(sheet, rowInfo, 'Preview link', oldVal, newVal);
+    apiPutOverride(rowId, { preview_url: newVal });
+    apiLogEdit(rowId, sheet, 'Preview link', oldVal, newVal);
+  }
   closePreviewDialog();
   render();
 }
@@ -964,6 +1071,8 @@ function updateStatusField(rowId, newVal, selectEl) {
     oldVal: oldVal,
     newVal: newVal
   });
+  apiPatchCreative(rowId, { status: newVal });
+  apiLogEdit(rowId, row.sheet, 'Status', oldVal, newVal);
   if (selectEl) {
     selectEl.className = 'status-dd ' + (BC[newVal] || 'b-draft');
   }
@@ -1041,7 +1150,11 @@ function saveImagesModal() {
   const newVal = lines.join('\n');
   const oldVal = overrides[_imgModalRowId].images || '';
   overrides[_imgModalRowId].images = newVal;
-  if (newVal !== oldVal) logEdit(_imgModalSheet, _imgModalRowInfo, 'Preferred Images', oldVal.substring(0,40), newVal.substring(0,40));
+  if (newVal !== oldVal) {
+    logEdit(_imgModalSheet, _imgModalRowInfo, 'Preferred Images', oldVal.substring(0,40), newVal.substring(0,40));
+    apiPutOverride(_imgModalRowId, { images: newVal });
+    apiLogEdit(_imgModalRowId, _imgModalSheet, 'Preferred Images', oldVal.substring(0,40), newVal.substring(0,40));
+  }
   closeImagesModal();
   render();
 }
@@ -1103,7 +1216,11 @@ function saveCities(ta, rowId, sheet, rowInfo, cell, display, btn, saveBtn) {
   ta.remove(); saveBtn.style.display='none';
   display.style.display=''; btn.style.display='';
   display.innerHTML = renderCities(newCities);
-  if (newCities !== oldVal) logEdit(sheet, rowInfo, 'Cities', oldVal, newCities);
+  if (newCities !== oldVal) {
+    logEdit(sheet, rowInfo, 'Cities', oldVal, newCities);
+    apiPutOverride(rowId, { cities: newCities });
+    apiLogEdit(rowId, sheet, 'Cities', oldVal, newCities);
+  }
 }
 
 // ── DESTINATION DROPDOWN ──
@@ -1127,7 +1244,11 @@ function selectDest(rowId, val, sheet, rowInfo) {
   const dd = document.getElementById('dest-dd-'+rowId);
   if (dd) dd.classList.remove('open');
   _openDestRowId = null;
-  if (val !== oldVal) logEdit(sheet, rowInfo, 'Destination', oldVal, val);
+  if (val !== oldVal) {
+    logEdit(sheet, rowInfo, 'Destination', oldVal, val);
+    apiPutOverride(rowId, { destination: val });
+    apiLogEdit(rowId, sheet, 'Destination', oldVal, val);
+  }
   render();
 }
 
@@ -1198,6 +1319,8 @@ function confirmDeleteRow() {
   if (idx !== -1) {
     const r = ALL_ROWS[idx];
     logEdit(r.sheet, `${r.market}/${r.destination}`, 'Row deleted', `${r.status} · ${r.destination}`, '');
+    apiLogEdit(_deleteRowId, r.sheet, 'Row deleted', `${r.status} · ${r.destination}`, '');
+    apiDeleteCreative(_deleteRowId);
     ALL_ROWS.splice(idx, 1);
     delete overrides[_deleteRowId];
   }
@@ -1229,8 +1352,37 @@ function saveCopyModal() {
     images: document.getElementById('cm-images').value.trim(),
     destination: document.getElementById('cm-dest').value,
     cities,
+    cp: 'active',
+    crimtan: 'in progress',
+    format: 'Standard Carousel',
+    feedback: '',
   };
   logEdit(newRow.sheet, `${newRow.market}/${newRow.destination}`, 'Row copied', '', 'new row added');
+  apiSeedCreative({
+    row_id: newRow._rowId,
+    sheet: newRow.sheet,
+    status: newRow.status,
+    season: newRow.season,
+    market: newRow.market,
+    destination: newRow.destination,
+    cities,
+    images: overrides[newRow._rowId].images,
+    preview_url: overrides[newRow._rowId].preview,
+    language: newRow.language,
+    frames: overrides[newRow._rowId].frames,
+  });
+  apiPutOverride(newRow._rowId, {
+    frames: overrides[newRow._rowId].frames,
+    preview_url: overrides[newRow._rowId].preview,
+    images: overrides[newRow._rowId].images,
+    destination: overrides[newRow._rowId].destination,
+    cities,
+    cp_status: 'active',
+    crimtan_status: 'in progress',
+    format: 'Standard Carousel',
+    feedback: '',
+  });
+  apiLogEdit(newRow._rowId, newRow.sheet, 'Row copied', '', 'new row added');
   closeCopyModal();
   render();
 }
@@ -1521,6 +1673,7 @@ SHEETS.forEach(s => {
 });
 
 render();
+loadFromServer();
 </script>
 </body>
 </html>

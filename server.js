@@ -53,7 +53,7 @@ const stytchClient = (STYTCH_PROJECT_ID && STYTCH_SECRET)
   : null;
 if (!stytchClient) console.warn("⚠  STYTCH_PROJECT_ID/STYTCH_SECRET not set — client login disabled");
 
-async function supabase(table, { method = "GET", query = "", body = null, useServiceKey = false } = {}) {
+async function supabase(table, { method = "GET", query = "", body = null, useServiceKey = false, prefer = "return=representation" } = {}) {
   const url = `${SUPABASE_URL}/rest/v1/${table}${query ? "?" + query : ""}`;
   const key = useServiceKey ? SUPABASE_SERVICE_KEY : SUPABASE_ANON_KEY;
   const opts = {
@@ -64,7 +64,7 @@ async function supabase(table, { method = "GET", query = "", body = null, useSer
       "Content-Type": "application/json",
       "Accept-Profile": SCHEMA,
       "Content-Profile": SCHEMA,
-      "Prefer": "return=representation",
+      "Prefer": prefer,
     },
   };
   if (body) opts.body = JSON.stringify(body);
@@ -871,11 +871,15 @@ app.post("/proxy/anthropic", requireAuth, apiLimit, async (req, res) => {
 // ── CX Dashboard API routes ───────────────────────────────────────────────────
 // GET /api/creatives — fetch all creatives (optionally filter by sheet)
 app.get("/api/creatives", requireAuth, async (req, res) => {
-  const allowed = ["sheet", "status", "market", "format", "order", "limit", "offset", "select"];
-  const params = {};
-  for (const k of allowed) { if (req.query[k] !== undefined) params[k] = req.query[k]; }
-  const { status, data } = await supabase("creatives", { query: new URLSearchParams(params).toString() });
-  res.status(status).json(data);
+  try {
+    const allowed = ["sheet", "status", "market", "format", "order", "limit", "offset", "select"];
+    const params = {};
+    for (const k of allowed) { if (req.query[k] !== undefined) params[k] = req.query[k]; }
+    const { status, data } = await supabase("creatives", { query: new URLSearchParams(params).toString() });
+    res.status(status).json(data);
+  } catch (err) {
+    res.status(502).json({ error: "Could not load creatives." });
+  }
 });
 
 // POST /api/creatives/seed — seed the database from RAW_DATA in the prototype
@@ -894,48 +898,92 @@ app.post("/api/creatives/seed", requireAuth, async (req, res) => {
 
 // PATCH /api/creatives/:rowId — update a creative row
 app.patch("/api/creatives/:rowId", requireAuth, async (req, res) => {
-  const { status, data } = await supabase("creatives", {
-    method: "PATCH",
-    query: `row_id=eq.${encodeURIComponent(req.params.rowId)}`,
-    body: { ...req.body, updated_at: new Date().toISOString() },
-    useServiceKey: true,
-  });
-  res.status(status).json(data);
+  try {
+    const { status, data } = await supabase("creatives", {
+      method: "PATCH",
+      query: `row_id=eq.${encodeURIComponent(req.params.rowId)}`,
+      body: { ...req.body, updated_at: new Date().toISOString() },
+      useServiceKey: true,
+    });
+    res.status(status).json(data);
+  } catch (err) {
+    res.status(502).json({ error: "Could not update this row." });
+  }
+});
+
+// DELETE /api/creatives/:rowId — remove a row (also drops its overrides row)
+app.delete("/api/creatives/:rowId", requireAuth, async (req, res) => {
+  try {
+    await supabase("overrides", {
+      method: "DELETE",
+      query: `row_id=eq.${encodeURIComponent(req.params.rowId)}`,
+      useServiceKey: true,
+    });
+    const { status, data } = await supabase("creatives", {
+      method: "DELETE",
+      query: `row_id=eq.${encodeURIComponent(req.params.rowId)}`,
+      useServiceKey: true,
+    });
+    res.status(status).json(data);
+  } catch (err) {
+    res.status(502).json({ error: "Could not delete row." });
+  }
 });
 
 // POST /api/edit_history — log an edit
 app.post("/api/edit_history", requireAuth, async (req, res) => {
-  const { status, data } = await supabase("edit_history", {
-    method: "POST",
-    body: req.body,
-    useServiceKey: true,
-  });
-  res.status(status).json(data);
+  try {
+    const { status, data } = await supabase("edit_history", {
+      method: "POST",
+      body: req.body,
+      useServiceKey: true,
+    });
+    res.status(status).json(data);
+  } catch (err) {
+    res.status(502).json({ error: "Could not log this edit." });
+  }
 });
 
 // GET /api/edit_history — fetch history (optionally filter by row_id)
 app.get("/api/edit_history", requireAuth, async (req, res) => {
-  const params = { order: "edited_at.desc", limit: "100" };
-  if (req.query.row_id && /^[a-zA-Z0-9_-]+$/.test(req.query.row_id)) params["row_id"] = `eq.${req.query.row_id}`;
-  const { status, data } = await supabase("edit_history", { query: new URLSearchParams(params).toString() });
-  res.status(status).json(data);
+  try {
+    const params = { order: "edited_at.desc", limit: "100" };
+    if (req.query.row_id && /^[a-zA-Z0-9_-]+$/.test(req.query.row_id)) params["row_id"] = `eq.${req.query.row_id}`;
+    const { status, data } = await supabase("edit_history", { query: new URLSearchParams(params).toString() });
+    res.status(status).json(data);
+  } catch (err) {
+    res.status(502).json({ error: "Could not load edit history." });
+  }
 });
 
 // PUT /api/overrides/:rowId — upsert frame/preview overrides
 app.put("/api/overrides/:rowId", requireAuth, async (req, res) => {
-  const { status, data } = await supabase("overrides", {
-    method: "POST",
-    query: "on_conflict=row_id",
-    body: { row_id: req.params.rowId, ...req.body, updated_at: new Date().toISOString() },
-    useServiceKey: true,
-  });
-  res.status(status).json(data);
+  try {
+    const { status, data } = await supabase("overrides", {
+      method: "POST",
+      query: "on_conflict=row_id",
+      body: { row_id: req.params.rowId, ...req.body, updated_at: new Date().toISOString() },
+      useServiceKey: true,
+      // on_conflict alone doesn't upsert — PostgREST needs this Prefer resolution
+      // to actually merge into the existing row instead of erroring as a
+      // duplicate key. This route had never been exercised before (0 rows in
+      // the table), so this was untested and would have failed on 2nd use.
+      prefer: "return=representation,resolution=merge-duplicates",
+    });
+    res.status(status).json(data);
+  } catch (err) {
+    res.status(502).json({ error: "Could not save this change." });
+  }
 });
 
 // GET /api/overrides — fetch all overrides
 app.get("/api/overrides", requireAuth, async (req, res) => {
-  const { status, data } = await supabase("overrides", {});
-  res.status(status).json(data);
+  try {
+    const { status, data } = await supabase("overrides", {});
+    res.status(status).json(data);
+  } catch (err) {
+    res.status(502).json({ error: "Could not load overrides." });
+  }
 });
 
 // ── Static frontend ───────────────────────────────────────────────────────────
