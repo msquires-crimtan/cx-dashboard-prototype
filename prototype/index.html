@@ -658,9 +658,14 @@ let dialogAnchorEl = null;
 
 // ── FLATTEN ALL rows with sheet key ──
 const ALL_ROWS = [];
+// _rowId uses a running counter across ALL sheets combined (not reset per
+// sheet) so it matches Supabase's existing row_id scheme exactly — verified
+// against the live data: EUR is 1-73, HK continues 74-112, etc., ending at
+// HK-CN 374-384. A naive per-sheet 1-based counter only happens to work for
+// EUR (the first sheet) and silently mismatches every other sheet.
+let _globalRowIdx = 0;
 Object.entries(RAW_DATA).forEach(([sh, rows]) => {
-  // 1-based to match the row_id scheme already seeded in Supabase (EUR_1, not EUR_0)
-  rows.forEach((r,i) => { ALL_ROWS.push({...r, sheet:sh, _rowId: sh+'_'+(i+1)}); });
+  rows.forEach((r) => { _globalRowIdx++; ALL_ROWS.push({...r, sheet:sh, _rowId: sh+'_'+_globalRowIdx}); });
 });
 
 // mutable copy of frames/preview per rowId
