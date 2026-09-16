@@ -659,7 +659,8 @@ let dialogAnchorEl = null;
 // ── FLATTEN ALL rows with sheet key ──
 const ALL_ROWS = [];
 Object.entries(RAW_DATA).forEach(([sh, rows]) => {
-  rows.forEach((r,i) => { ALL_ROWS.push({...r, sheet:sh, _rowId: sh+'_'+i}); });
+  // 1-based to match the row_id scheme already seeded in Supabase (EUR_1, not EUR_0)
+  rows.forEach((r,i) => { ALL_ROWS.push({...r, sheet:sh, _rowId: sh+'_'+(i+1)}); });
 });
 
 // mutable copy of frames/preview per rowId
@@ -734,12 +735,19 @@ async function loadFromServer() {
     dbCreatives.forEach(dbRow => {
       const rid = dbRow.row_id;
       let row = byId.get(rid);
-      if (!row) {
-        // Created on another device/session since this file was last published.
+      // Only ever add a DB row that isn't already on the page if its id looks
+      // like one this file's own "copy row" flow generates (sheet_copy_<ts>).
+      // A plain sheet_<n> id that doesn't match anything here means the id
+      // schemes have drifted out of sync somehow — silently duplicating 384
+      // rows because of that is worse than just skipping it and logging.
+      if (!row && /_copy_\d+$/.test(rid)) {
         row = { sheet: dbRow.sheet, _rowId: rid, frames: ['','','','',''] };
         ALL_ROWS.push(row);
         byId.set(rid, row);
         overrides[rid] = { frames:['','','','','',''], preview:'', images:'', destination:'', cities:'', cp:'active', crimtan:'in progress', format:'Standard Carousel', feedback:'' };
+      } else if (!row) {
+        console.warn('Skipped unrecognized DB row (id scheme mismatch?):', rid);
+        return;
       }
       if (dbRow.status != null) row.status = dbRow.status;
       if (dbRow.season != null) row.season = dbRow.season;
