@@ -723,6 +723,18 @@ function apiLogEdit(rowId, sheet, field, oldVal, newVal) {
   }).catch(e => console.error('Persist failed (history):', e));
 }
 
+// Viewers with no session (a public share link, or a client login — both
+// serve this same document) get every edit control but the save API rejects
+// them with 401, so an edit used to appear to work and then just vanish on
+// reload with zero explanation. Every mutation below calls this first.
+function checkEditable() {
+  if (window.CX_READONLY) {
+    alert('This is a read-only preview link — changes here can\'t be saved. Ask your Crimtan contact for editor access.');
+    return false;
+  }
+  return true;
+}
+
 // Pulls the live database state on top of the embedded snapshot above, so
 // edits anyone has made (on this device or another) are what's actually
 // shown, not just whatever was baked into this HTML file at last publish.
@@ -912,6 +924,7 @@ function toggleHistory() {
 // ── INLINE DROPDOWN SAVE ──
 const OVERRIDE_DB_FIELD = { cp: 'cp_status', crimtan: 'crimtan_status', format: 'format' };
 function saveInlineDD(rowId, field, val, label) {
+  if (!checkEditable()) { render(); return; }
   const old = overrides[rowId][field]||'';
   overrides[rowId][field] = val;
   const r = ALL_ROWS.find(x=>x._rowId===rowId);
@@ -953,6 +966,7 @@ function saveFrame(el, rowId, frameIdx, sheet, rowInfo) {
   const newVal = el.textContent.trim();
   const field = frameIdx === -1 ? 'feedback' : null;
   const oldVal = field ? (overrides[rowId][field]||'') : (overrides[rowId].frames[frameIdx]||'');
+  if (!checkEditable()) { el.textContent = oldVal; el.onblur = null; el.contentEditable = 'false'; return; }
   el.onblur = null;
   el.contentEditable = 'false';
   if (newVal !== oldVal) {
@@ -1031,6 +1045,7 @@ function closePreviewDialog() {
 
 function savePreviewDialog() {
   if (!currentPreviewCell) return;
+  if (!checkEditable()) { closePreviewDialog(); return; }
   const newVal = document.getElementById('prev-input').value.trim();
   const {rowId, sheet, rowInfo} = currentPreviewCell;
   const oldVal = overrides[rowId].preview || '';
@@ -1075,6 +1090,7 @@ function updateStatusField(rowId, newVal, selectEl) {
   if (!row) return;
   const oldVal = row.status;
   if (oldVal === newVal) return;
+  if (!checkEditable()) { render(); return; }
   row.status = newVal;
   editHistory.push({
     ts: new Date().toISOString(),
@@ -1152,6 +1168,7 @@ function renumberImgRows() {
 }
 
 function saveImagesModal() {
+  if (!checkEditable()) { closeImagesModal(); return; }
   const rows = document.querySelectorAll('#img-rows-container .img-row');
   const lines = [];
   rows.forEach(row => {
@@ -1223,6 +1240,7 @@ function cancelCities(cell, display, btn, ta, saveBtn) {
 }
 
 function saveCities(ta, rowId, sheet, rowInfo, cell, display, btn, saveBtn) {
+  if (!checkEditable()) { cancelCities(cell, display, btn, ta, saveBtn); return; }
   const newCities = ta.value.split('\n').map(c=>c.trim()).filter(Boolean).join(' · ');
   const oldVal = _citiesOriginal;
   overrides[rowId].cities = newCities;
@@ -1252,11 +1270,12 @@ function toggleDestDropdown(rowId) {
 }
 
 function selectDest(rowId, val, sheet, rowInfo) {
-  const oldVal = overrides[rowId].destination || '';
-  overrides[rowId].destination = val;
   const dd = document.getElementById('dest-dd-'+rowId);
   if (dd) dd.classList.remove('open');
   _openDestRowId = null;
+  if (!checkEditable()) return;
+  const oldVal = overrides[rowId].destination || '';
+  overrides[rowId].destination = val;
   if (val !== oldVal) {
     logEdit(sheet, rowInfo, 'Destination', oldVal, val);
     apiPutOverride(rowId, { destination: val });
@@ -1328,6 +1347,7 @@ function closeDeleteModal() {
 
 function confirmDeleteRow() {
   if (!_deleteRowId) return;
+  if (!checkEditable()) { closeDeleteModal(); return; }
   const idx = ALL_ROWS.findIndex(x=>x._rowId===_deleteRowId);
   if (idx !== -1) {
     const r = ALL_ROWS[idx];
@@ -1342,6 +1362,7 @@ function confirmDeleteRow() {
 }
 
 function saveCopyModal() {
+  if (!checkEditable()) { closeCopyModal(); return; }
   const orig = ALL_ROWS.find(x=>x._rowId===_copyRowId);
   if (!orig) return;
   const cities = document.getElementById('cm-cities').value.split('\n').map(c=>c.trim()).filter(Boolean).join(' · ');
@@ -1684,6 +1705,13 @@ SHEETS.forEach(s => {
   };
   tabsEl.appendChild(el);
 });
+
+if (window.CX_READONLY) {
+  const banner = document.createElement('div');
+  banner.textContent = '👁 Read-only preview — changes here can\'t be saved. Ask your Crimtan contact for editor access.';
+  banner.style.cssText = 'position:sticky;top:0;z-index:500;background:#3d0016;color:#fff;font:600 12px/1.4 -apple-system,sans-serif;text-align:center;padding:6px 12px;';
+  document.body.prepend(banner);
+}
 
 render();
 loadFromServer();

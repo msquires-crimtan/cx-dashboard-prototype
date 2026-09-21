@@ -285,9 +285,15 @@ function currentEmail(req) {
   return verifyToken(parseCookies(req)[COOKIE_NAME])?.email || null;
 }
 
-// Shared by the authenticated editor preview (/prototype) and public share
-// links (/share/:token) — same document, same headers.
-function sendPrototypeHtml(res) {
+// Shared by every route that serves the prototype document (authenticated
+// editor, public share links, client logins) — same document, same headers,
+// differing only in whether the viewer is allowed to make edits that persist.
+// readOnly injects a flag the page's own script checks before every write —
+// without it, a viewer with no session (a public share link, or a client
+// login, which is meant to be view-only) sees every edit control working
+// but every save silently fails auth server-side and is lost, which is
+// exactly what happened to a real tester before this flag existed.
+function sendHtmlDoc(res, filePath, { readOnly = false } = {}) {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
   res.setHeader("Cache-Control", "no-store");
@@ -297,8 +303,11 @@ function sendPrototypeHtml(res) {
   // drop the app-wide CSP for just this response instead of rewriting
   // hundreds of handlers in AI-editable markup.
   res.removeHeader("Content-Security-Policy");
-  res.send(fs.readFileSync(PROTO_PATH, "utf-8"));
+  let html = fs.readFileSync(filePath, "utf-8");
+  if (readOnly) html = html.replace("<head>", "<head><script>window.CX_READONLY=true;<\/script>");
+  res.send(html);
 }
+function sendPrototypeHtml(res, opts) { sendHtmlDoc(res, PROTO_PATH, opts); }
 
 // The published snapshot clients see — a deliberate copy of PROTO_PATH, only
 // updated when a colleague clicks Publish, so live AI-editing sessions never
@@ -306,18 +315,14 @@ function sendPrototypeHtml(res) {
 const PUBLISHED_FILE = "prototype/production.html";
 const PUBLISHED_PATH = path.join(REPO_DIR, PUBLISHED_FILE);
 
-function sendProductionHtml(res) {
+function sendProductionHtml(res, opts) {
   if (!fs.existsSync(PUBLISHED_PATH)) {
     return res.status(503).send(
       "<html><body style='font-family:sans-serif;padding:60px;text-align:center;color:#666'>" +
       "<h2>Nothing published yet</h2><p>Ask your Crimtan contact to publish the latest version.</p></body></html>"
     );
   }
-  res.setHeader("Content-Type", "text/html; charset=utf-8");
-  res.setHeader("X-Frame-Options", "SAMEORIGIN");
-  res.setHeader("Cache-Control", "no-store");
-  res.removeHeader("Content-Security-Policy");
-  res.send(fs.readFileSync(PUBLISHED_PATH, "utf-8"));
+  sendHtmlDoc(res, PUBLISHED_PATH, opts);
 }
 
 // ── Prototype routes ──────────────────────────────────────────────────────────
@@ -544,7 +549,7 @@ app.get("/share/:token", async (req, res) => {
       );
     }
     await ensureRepo();
-    sendPrototypeHtml(res);
+    sendPrototypeHtml(res, { readOnly: true });
   } catch (err) {
     res.status(502).send("Could not load this preview — please try again.");
   }
@@ -748,7 +753,7 @@ app.get("/client/:slug/preview", requireClientAuth, async (req, res) => {
     const client = await getClientBySlug(req.params.slug);
     if (!client) return res.status(404).send("Unknown client.");
     await ensureRepo();
-    sendProductionHtml(res);
+    sendProductionHtml(res, { readOnly: true });
   } catch (err) {
     res.status(502).send("Could not load this preview — please try again.");
   }
