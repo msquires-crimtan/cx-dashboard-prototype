@@ -819,7 +819,8 @@ app.post("/client/:slug/set-password", clientLoginLimit, async (req, res) => {
     });
     res.json({ mfa: "enroll", intermediateToken: result.intermediate_session_token, memberId: result.member_id, qrCode: enroll.qr_code, secret: enroll.secret });
   } catch (err) {
-    res.status(401).json({ error: "This link is invalid or has expired — ask for a new invite." });
+    console.error("set-password failed:", err.message);
+    res.status(401).json({ error: `This link is invalid or has expired — ask for a new invite. (${err.message})` });
   }
 });
 
