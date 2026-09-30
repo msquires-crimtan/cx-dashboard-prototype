@@ -820,7 +820,18 @@ app.post("/client/:slug/set-password", clientLoginLimit, async (req, res) => {
     res.json({ mfa: "enroll", intermediateToken: result.intermediate_session_token, memberId: result.member_id, qrCode: enroll.qr_code, secret: enroll.secret });
   } catch (err) {
     console.error("set-password failed:", err.message);
-    res.status(401).json({ error: `This link is invalid or has expired — ask for a new invite. (${err.message})` });
+    // Stytch's own error_message is already accurate and user-facing (e.g.
+    // "password appears in a list of breached passwords") — showing a
+    // hardcoded "link expired" for every failure here previously sent every
+    // password-strength rejection down the wrong troubleshooting path
+    // entirely (a real tester tried several passwords, got this every time,
+    // and reasonably concluded the invite link itself was broken).
+    let message = "This link is invalid or has expired — ask for a new invite.";
+    try {
+      const parsed = JSON.parse(err.message);
+      if (parsed?.error_message) message = parsed.error_message;
+    } catch { /* not a structured Stytch error — keep the generic message */ }
+    res.status(400).json({ error: message });
   }
 });
 
